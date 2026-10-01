@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     ocr_result_dir: Path = BACKEND_DIR / "data/ocr"
     export_dir: Path = BACKEND_DIR / "data/exports"
     max_retrieval_rows: int = Field(default=100, gt=0)
+    retrieval_timeout_seconds: float = Field(default=5, gt=0, allow_inf_nan=False)
     max_context_chars: int = Field(default=20000, gt=0)
 
     @field_validator("ollama_base_url")

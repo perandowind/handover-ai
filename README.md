@@ -1,7 +1,7 @@
 # Handover AI — Prototype v1
 
 스캔 이미지 PDF 기반 인수인계서 자동 작성 및 분석 시스템입니다.
-최우선 명세는 [PROTOTYPE_SPEC.md](PROTOTYPE_SPEC.md)이며, 현재 **Phase 1~3 — Project Skeleton / Document Pipeline / LLM Infrastructure**까지 구현했습니다.
+최우선 명세는 [PROTOTYPE_SPEC.md](PROTOTYPE_SPEC.md)이며, 현재 **Phase 1~4 — Project Skeleton / Document Pipeline / LLM Infrastructure / SQL Retrieval**까지 구현했습니다.
 
 ## 현재 범위
 
@@ -16,7 +16,8 @@ PDF 업로드 → 파일 검증 → 페이지 PNG 렌더링 → PaddleOCR
 - `PP-OCRv5_mobile_det` + `korean_PP-OCRv5_mobile_rec`
 - React + TypeScript + Vite + React Router: Upload, Documents, 문서 상세
 - LLMProvider 추상화, Ollama REST adapter, 공통 JSON/Pydantic 검증, Task별 설정·프롬프트 구현
-- 실제 SQL Generation/Retrieval, 문서·문제 생성 서비스, 채점/Python fallback, PDF Export는 이후 Phase 범위
+- 자연어 → SQL Generation → SQL Validator → 읽기 전용 SQLite 조회 → Context 구성
+- 문서·문제 생성 서비스, 채점/Python fallback, PDF Export는 이후 Phase 범위
 - PP-StructureV3를 호출하거나 별도 필수 의존성으로 사용하지 않습니다.
 - PDF 텍스트를 직접 추출하는 처리 경로는 없습니다. 입력은 항상 이미지로 렌더링하여 OCR합니다.
 
@@ -84,6 +85,7 @@ PaddleOCR adapter는 PP-OCRv5 모델명을 명시합니다. 라이브러리 기�
 | `GET /api/documents?offset=0&limit=20` | 최근 문서부터 조회, 최대 limit 100 |
 | `GET /api/documents/{id}` | 상태·페이지 OCR·섹션·업무 항목·처리 오류 |
 | `GET /api/documents/{id}/sections` | 원천 페이지와 순서를 포함한 섹션 |
+| `POST /api/retrieval/search` | 자연어 요청으로 검증된 SQL 조회 및 Context 반환 |
 
 저장소의 `sample-data/scanned-pdfs/db-handover-scan.pdf`는 2페이지 합성 한국어 이미지 전용 PDF입니다. 실제 기업 기밀 데이터는 없습니다.
 
@@ -205,7 +207,7 @@ Frontend `VITE_API_BASE_URL`은 `/api` 없는 backend origin이며 변경 시 �
 
 각 `llm/tasks/*_task.py`는 model, system prompt, output schema, 재시도 정책을 연결하는 **설정 모듈**입니다. 실제 자연어→SQL workflow, DB schema 구성, retrieval/context builder, 문서 생성 API, 문제 저장, 답안 채점 workflow는 구현하지 않았습니다. `/api/generation`, `/api/questions`, `/api/scoring` 경로도 추가하지 않았습니다.
 
-출력 contract의 역할은 타입·필수 필드·점수 범위 등의 구조 검증입니다. `SQLGenerationOutput`을 통과해도 SQL이 안전하다는 뜻이 아닙니다. SQL 실행 코드가 없으며 Phase 4에서 별도 SQL Validator를 구현해야 합니다. 질문 수·정답/선택지 관계·원천 section 존재 여부 같은 비즈니스 검증도 해당 Phase에서 추가합니다.
+출력 contract의 역할은 타입·필수 필드·점수 범위 등의 구조 검증입니다. `SQLGenerationOutput`을 통과해도 SQL이 안전하다는 뜻이 아닙니다. Phase 4는 이 출력에 별도 SQL Validator를 적용한 뒤에만 조회합니다. 질문 수·정답/선택지 관계·원천 section 존재 여부 같은 비즈니스 검증도 해당 Phase에서 추가합니다.
 
 ### 통신과 출력 검증
 
@@ -289,13 +291,13 @@ backend/scripts/smoke_llm.py
 backend/tests/llm/{conftest,test_ollama_provider,test_validation,test_client,test_dependencies}.py
 ```
 
-기존 `main.py`, `core/config.py`, `.env.example`, `pyproject.toml`, `uv.lock`, `tests/test_config.py`, README도 갱신했습니다. 실제 생성 기능과 SQL Validator는 이후 Phase에서 이 기반을 사용해 구현합니다.
+기존 `main.py`, `core/config.py`, `.env.example`, `pyproject.toml`, `uv.lock`, `tests/test_config.py`, README도 갱신했습니다. Phase 4의 SQL Generation/Validator가 이 기반을 사용하며, 문서·문제 생성과 채점은 이후 Phase 범위입니다.
 
 참고: [Ollama chat API](https://docs.ollama.com/api/chat), [Structured outputs](https://docs.ollama.com/capabilities/structured-outputs), [HTTPX async](https://www.python-httpx.org/async/), [HTTPX MockTransport](https://www.python-httpx.org/advanced/transports/).
 
 ## Migration
 
-Phase 2~3에서는 기존 6개 모델/테이블을 그대로 사용하며 **추가 migration은 없습니다**.
+Phase 2~4에서는 기존 6개 모델/테이블을 그대로 사용하며 **추가 migration은 없습니다**.
 
 ```bash
 cd backend
@@ -382,6 +384,86 @@ sample-data/metadata/db-handover.expected.json
 
 기존 `app/main.py`, `core/config.py`, `.env.example`, Python/Node 의존성 및 lockfile, `App.tsx`, CSS, `.gitignore`, README를 갱신했습니다. Phase 1 ORM과 migration, 최우선 명세는 변경하지 않았습니다.
 
-실제 양식의 표·목차에 대한 parser 정확도와 스캔 품질은 계속 평가해야 합니다. 다음 구현 단계는 Phase 4 SQL Retrieval이며, 생성된 SQL은 반드시 SQL Validator를 통과한 뒤에만 실행해야 합니다.
+실제 양식의 표·목차에 대한 parser 정확도와 스캔 품질은 계속 평가해야 합니다. Phase 4 SQL Retrieval은 아래에 설명합니다. 다음 단계의 문서 생성은 검증된 조회 결과와 Context를 사용해야 합니다.
 
 공식 참고: [PaddleOCR OCR 사용법](https://www.paddleocr.ai/latest/en/version3.x/pipeline_usage/OCR.html), [공식 한국어 모델](https://huggingface.co/PaddlePaddle/korean_PP-OCRv5_mobile_rec), [PyMuPDF 이미지 렌더링](https://pymupdf.readthedocs.io/en/latest/recipes-images.html).
+
+
+## Phase 4 — SQL Generation / Retrieval
+
+`POST /api/retrieval/search`는 자연어 `query`만 받습니다. API에서 SQL 직접 입력은 받지 않습니다.
+
+```bash
+curl -sS http://127.0.0.1:8000/api/retrieval/search \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"DB 운영 및 백업 관련 업무를 중요도 순으로 찾아줘"}'
+```
+
+응답 필드:
+
+| 필드 | 의미 |
+| --- | --- |
+| `sql` | Validator가 정규화하고 LIMIT를 적용한 실제 조회 SQL |
+| `rows`, `row_count` | 조회 결과와 반환 행 수 |
+| `context` | 업무명·설명·주의사항 등 의미 있는 라벨로 구성한 근거 |
+| `context_truncated` | 조회된 결과로 만든 Context가 row/문자 제한 때문에 축약되었는지 |
+
+SQL의 LIMIT로 DB에서 제외된 행 수는 계산하지 않습니다. 검색 결과가 없으면 HTTP 200, `rows: []`, `context: ""`입니다. 검색 전 문서의 OCR/parse 완료를 확인하세요. 명시적으로 요청한 정렬을 우선하며 ContextBuilder는 조회 순서를 유지합니다. 별도의 relevance 점수나 reranker는 구현하지 않습니다.
+
+### 처리와 검증 경계
+
+1. `RetrievalSchema`가 ORM에서 `documents`, `document_sections`, `handover_items`의 컬럼·타입·FK 정보를 가져옵니다. 같은 allowlist를 LLM 프롬프트, Validator, 실행 계층에서 공유합니다. `document_pages`, `questions`, `scoring_results`, SQLite 시스템 테이블은 제외합니다.
+2. `SQLGenerationTask`가 기존 `StructuredLLMClient`/`LLMProvider`와 `SQL_MODEL`을 사용합니다. Phase 3의 `SQLGenerationOutput(sql, reason)` Pydantic schema를 재사용합니다.
+3. SQLGlot AST로 단일 SELECT인지, 모든 테이블·컬럼이 허용되는지 검사합니다. 별칭, 모호한 컬럼, HAVING 참조까지 검증하며 `*`는 허용 컬럼으로 확장합니다. **원본 SQL은 DB에 실행하지 않습니다.**
+4. JSON/Pydantic 또는 SQL 검증 실패를 합쳐 **총 두 번까지만** 모델을 호출합니다. 한 번 재생성 후에도 실패하면 HTTP 502 `SQL_GENERATION_FAILED`입니다. Provider 연결/timeout 오류 및 DB 실행 실패는 재생성 대상이 아닙니다.
+5. `SqlRetrievalStrategy`는 검증된 SQL만 `SQLiteReader`에 전달합니다. 별도 `mode=ro` 연결, `query_only`, SQLite authorizer로 쓰기·외부 DB·미허용 테이블/함수를 재차 차단합니다. ORM의 쓰기용 연결에는 영향을 주지 않습니다. 동기 SQLite 작업은 thread pool에서 실행합니다.
+6. `ContextBuilder`가 조회 결과에 라벨을 붙이고 문자열 값을 인용·이스케이프하여 최대 문자 수 안으로 제한합니다. 향후 생성 Task에서도 이 Context를 신뢰할 수 없는 근거 데이터로 취급해야 합니다.
+
+지원 SELECT 범위는 WHERE/LIKE/IN/BETWEEN/NULL 비교, ORDER BY, LIMIT/OFFSET, ON 조건을 명시한 INNER/LEFT JOIN, GROUP BY/HAVING입니다. 함수는 LOWER/UPPER/LENGTH/COALESCE 및 COUNT/MIN/MAX/SUM/AVG로 제한합니다. 결과 컬럼명은 중복되지 않아야 합니다.
+
+INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, REPLACE, PRAGMA, ATTACH, DETACH 및 다중 statement는 거부합니다. CTE·서브쿼리·UNION·window·CROSS JOIN·임의 함수도 Prototype의 지원 범위 밖으로 거부합니다. 금지어가 단순 문자열 값이나 주석에 있는 경우에는 명령으로 취급하지 않습니다.
+
+### 환경설정과 오류
+
+```env
+SQL_MODEL=qwen3.5:4b
+MAX_RETRIEVAL_ROWS=100
+MAX_CONTEXT_CHARS=20000
+RETRIEVAL_TIMEOUT_SECONDS=5
+```
+
+LIMIT가 없으면 최대 행 수를 추가하고, 더 큰 LIMIT는 최대 행 수로 낮춥니다. `LIMIT 0`도 보존합니다. 조회 실행은 기본 5초의 SQLite progress deadline으로 제한하며, SQLite 값/행의 최대 크기는 1 MB로 제한합니다. 이 상한에 걸린 데이터는 잘라서 반환하지 않고 오류로 처리합니다.
+
+파일 기반 SQLite가 필요합니다. 메모리 DB에 대한 Retrieval은 HTTP 503 `RETRIEVAL_DATABASE_UNSUPPORTED`입니다. 파일이 없으면 새 DB를 만들지 않고 `RETRIEVAL_FAILED`를 반환합니다. Migration을 먼저 적용하세요. 기타 DB 오류는 `RETRIEVAL_FAILED`, 실행 deadline은 `RETRIEVAL_TIMEOUT`이며 기존 `{code, message, detail}` 오류 형식을 사용합니다.
+
+앱 시작/health/OCR은 Ollama 없이 계속 동작합니다. 실제 Retrieval 요청에는 실행 중인 Ollama와 `SQL_MODEL`이 필요합니다. 모델 준비는 위 Phase 3 설명을 따르세요. `DEBUG_LOGGING=true`일 때 생성 SQL이 로그에 기록되므로 검색어가 포함될 수 있습니다. 기본 로그에는 검증 결과와 row 수만 남깁니다.
+
+### 테스트 / 검증 결과 (2026-10-01)
+
+```bash
+cd backend
+uv sync --locked
+uv run alembic upgrade head
+uv run pytest -q tests/retrieval
+uv run pytest -q
+uv run alembic check
+```
+
+- Phase 4 테스트: **105 passed** — 금지 명령, 테이블/컬럼·별칭, 다중 statement, 함수, LIMIT, Context, 재생성 횟수, 실행 전 검증, 읽기 전용 방어, deadline 검증.
+- 전체 backend: **261 passed, 5 warnings**. 기존 PyMuPDF SWIG deprecation warning만 발생했습니다.
+- 통합 테스트: Alembic으로 생성한 임시 SQLite + Mock Provider + 실제 Validator/Reader/ContextBuilder/API를 사용합니다. 외부 HTTP 호출은 테스트 fixture에서 금지하며 Ollama가 꺼져 있어도 실행됩니다.
+- Frontend TypeScript/Vite build 및 Alembic schema check 통과. 추가 migration은 없으며 revision `0001`을 유지합니다.
+- 기존 Phase 2의 실제 OCR 샘플 DB(문서 ID 1)에 Mock Provider를 연결한 읽기 전용 smoke에서 백업 관련 **7행**과 Context를 확인했습니다. 샘플 DB는 수정하지 않았습니다.
+- 이번 Phase에서 실제 Qwen 모델의 SQL 생성 정확도는 검증하지 않았습니다. 다음 Phase 전에는 실제 모델로 한국어 검색어·정렬·JOIN 생성 품질을 확인해야 합니다.
+
+### Phase 4 파일
+
+```text
+backend/app/api/retrieval.py
+backend/app/schemas/retrieval.py
+backend/app/services/retrieval_service.py
+backend/app/retrieval/{__init__,base,schema,validator,executor,sql_strategy,context,dependencies}.py
+backend/tests/retrieval/{conftest,test_validator,test_context,test_integration}.py
+```
+
+기존 `app/llm/tasks/sql_task.py`, `app/llm/prompts/sql_generation.py`, `app/main.py`, `app/core/config.py`, `.env.example`, `pyproject.toml`, `uv.lock`, README를 수정했습니다. 프런트엔드·ORM·migration·최우선 명세는 변경하지 않았습니다. Vector Retrieval/DB 및 문서·문제 생성은 구현하지 않았습니다.
