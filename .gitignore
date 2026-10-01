@@ -1,0 +1,115 @@
+# =========================================================
+# Handover AI Prototype
+# Python / FastAPI / React / Vite / SQLite / IntelliJ / macOS
+# =========================================================
+
+# ---------- Environment / secrets ----------
+.env
+.env.*
+!.env.example
+
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*$py.class
+
+.venv/
+venv/
+env/
+ENV/
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ---------- SQLite ----------
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-shm
+*.db-wal
+
+# ---------- Runtime-generated backend data ----------
+backend/data/uploads/
+backend/data/pages/
+backend/data/ocr/
+backend/data/exports/
+
+# Keep seed data under version control if present
+!backend/data/seed/
+!backend/data/seed/**
+
+# ---------- PaddleOCR / PaddleX local caches ----------
+.paddleocr/
+.paddlex/
+
+# ---------- Node / React / Vite ----------
+node_modules/
+frontend/node_modules/
+
+frontend/dist/
+frontend/.vite/
+coverage/
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local package-manager metadata
+.npm/
+.pnpm-store/
+
+# ---------- IntelliJ / JetBrains ----------
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# ---------- VS Code (optional local settings) ----------
+.vscode/
+
+# ---------- macOS ----------
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ---------- Temporary / editor files ----------
+*.swp
+*.swo
+*~
+.tmp/
+temp/
+tmp/
+
+# ---------- Logs ----------
+*.log
+logs/
+
+# ---------- Generated documents ----------
+# Keep generated exports out of Git.
+*.generated.pdf
+*.generated.html
+
+# ---------- OS / local certificates / keys ----------
+*.pem
+*.key
+*.crt
+
+# ---------- Misc ----------
+Thumbs.db
+
+# OCR model cache used by local verification
+backend/data/paddlex/
+backend/data/smoke/
