@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -38,6 +39,26 @@ class Settings(BaseSettings):
     export_dir: Path = BACKEND_DIR / "data/exports"
     max_retrieval_rows: int = Field(default=100, gt=0)
     max_context_chars: int = Field(default=20000, gt=0)
+
+    @field_validator("ollama_base_url")
+    @classmethod
+    def validate_ollama_url(cls, value: str) -> str:
+        value = value.strip().rstrip("/")
+        url = urlsplit(value)
+        if (url.scheme not in {"http", "https"} or not url.hostname
+                or url.username is not None or url.password is not None
+                or url.query or url.fragment or any(char.isspace() for char in value)):
+            raise ValueError("OLLAMA_BASE_URL must be an HTTP(S) URL without credentials, query, or fragment")
+        if url.port is not None and not 1 <= url.port <= 65535:
+            raise ValueError("OLLAMA_BASE_URL must be an HTTP(S) URL without credentials, query, or fragment")
+        return value
+
+    @field_validator("sql_model", "document_model", "question_model", "scoring_model")
+    @classmethod
+    def nonempty_model(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("LLM model name must not be empty")
+        return value.strip()
 
     @field_validator("database_url")
     @classmethod

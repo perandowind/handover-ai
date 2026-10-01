@@ -349,6 +349,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "alembic" },
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "paddleocr" },
     { name = "paddlepaddle" },
     { name = "pydantic" },
@@ -361,7 +362,6 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "httpx" },
     { name = "pytest" },
 ]
 
@@ -369,6 +369,7 @@ dev = [
 requires-dist = [
     { name = "alembic", specifier = ">=1.13,<2" },
     { name = "fastapi", specifier = ">=0.115,<1" },
+    { name = "httpx", specifier = ">=0.27,<1" },
     { name = "paddleocr", specifier = ">=3.3,<3.4" },
     { name = "paddlepaddle", specifier = ">=3.2,<3.3" },
     { name = "pydantic", specifier = ">=2,<3" },
@@ -380,10 +381,7 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [
-    { name = "httpx", specifier = ">=0.27,<1" },
-    { name = "pytest", specifier = ">=8,<10" },
-]
+dev = [{ name = "pytest", specifier = ">=8,<10" }]
 
 [[package]]
 name = "hf-xet"

@@ -1,7 +1,7 @@
 # Handover AI — Prototype v1
 
 스캔 이미지 PDF 기반 인수인계서 자동 작성 및 분석 시스템입니다.
-최우선 명세는 [PROTOTYPE_SPEC.md](PROTOTYPE_SPEC.md)이며, 현재 **Phase 1 + Phase 2 — Document Pipeline**까지 구현했습니다.
+최우선 명세는 [PROTOTYPE_SPEC.md](PROTOTYPE_SPEC.md)이며, 현재 **Phase 1~3 — Project Skeleton / Document Pipeline / LLM Infrastructure**까지 구현했습니다.
 
 ## 현재 범위
 
@@ -15,7 +15,8 @@ PDF 업로드 → 파일 검증 → 페이지 PNG 렌더링 → PaddleOCR
 - PaddleOCR 3.3.3 + PaddlePaddle 3.2.2 CPU
 - `PP-OCRv5_mobile_det` + `korean_PP-OCRv5_mobile_rec`
 - React + TypeScript + Vite + React Router: Upload, Documents, 문서 상세
-- LLM, Ollama, SQL Generation/Retrieval, 문서·문제 생성, 채점, PDF Export는 미구현
+- LLMProvider 추상화, Ollama REST adapter, 공통 JSON/Pydantic 검증, Task별 설정·프롬프트 구현
+- 실제 SQL Generation/Retrieval, 문서·문제 생성 서비스, 채점/Python fallback, PDF Export는 이후 Phase 범위
 - PP-StructureV3를 호출하거나 별도 필수 의존성으로 사용하지 않습니다.
 - PDF 텍스트를 직접 추출하는 처리 경로는 없습니다. 입력은 항상 이미지로 렌더링하여 OCR합니다.
 
@@ -170,9 +171,131 @@ DB 및 데이터 디렉터리 상대 경로는 항상 `backend/` 기준입니다
 
 Frontend `VITE_API_BASE_URL`은 `/api` 없는 backend origin이며 변경 시 재시작/재빌드가 필요합니다. 업로드 화면의 크기 안내는 기본 서버 설정 기준입니다. 서버의 제한을 변경하면 안내도 맞춰주세요.
 
+## Phase 3 — LLM Infrastructure
+
+### 구성과 경계
+
+```text
+향후 Business Service
+    → StructuredLLMClient
+        → LLMProvider (abstract interface)
+            → OllamaLLMProvider
+                → httpx.AsyncClient → POST /api/chat
+        → JSON parse → Pydantic validation → typed result
+```
+
+- `LLMProvider.generate()`는 model/system_prompt/user_prompt/response_schema를 받아 비동기로 **검증 전 문자열**을 반환합니다.
+- 실제 소비 계층은 `StructuredLLMClient.generate()`를 사용하여 Pydantic 객체를 받습니다.
+- `OllamaLLMProvider`만 Ollama REST protocol을 압니다. Business Service에 Ollama SDK나 특정 모델명을 넣지 않습니다.
+- 앱 생성 시 `create_app(..., llm_provider=provider)`로 다른 Provider를 주입할 수 있습니다. FastAPI dependency는 `get_llm_provider`, `get_llm_client`입니다.
+- 기본 AsyncClient는 앱 lifespan에서 한 번 생성하고 종료 시 닫습니다. 주입된 Provider의 리소스는 호출자가 소유합니다.
+- startup/health/OCR/문서 조회에서 Ollama에 연결하지 않습니다. 모델 자동 다운로드·서버 자동 실행도 하지 않습니다.
+- `.env.example`의 기존 `qwen3.5:4b` 기본값을 사용하며 `httpx`를 개발 전용에서 runtime 의존성으로 옮겼습니다.
+
+### Task별 분리
+
+| 논리 Task | 환경변수 | 출력 contract | 형식 검증 실패 재요청 |
+| --- | --- | --- | --- |
+| SQL Generation | `SQL_MODEL` | `SQLGenerationOutput` | 최대 1회 |
+| Document Generation | `DOCUMENT_MODEL` | `GeneratedDocument` | 최대 1회 |
+| Question Generation | `QUESTION_MODEL` | `QuestionGenerationResult` | 최대 1회 |
+| Scoring | `SCORING_MODEL` | `LLMScoringResult` | 없음, 실패 전달 |
+
+네 모델의 Prototype 기본값은 모두 `qwen3.5:4b`입니다. OS 환경변수 또는 `backend/.env`에서 각각 바꾸고 backend를 재시작하면 새 Task 설정이 적용됩니다. Provider 코드와 향후 Business Service를 수정할 필요가 없습니다.
+
+각 `llm/tasks/*_task.py`는 model, system prompt, output schema, 재시도 정책을 연결하는 **설정 모듈**입니다. 실제 자연어→SQL workflow, DB schema 구성, retrieval/context builder, 문서 생성 API, 문제 저장, 답안 채점 workflow는 구현하지 않았습니다. `/api/generation`, `/api/questions`, `/api/scoring` 경로도 추가하지 않았습니다.
+
+출력 contract의 역할은 타입·필수 필드·점수 범위 등의 구조 검증입니다. `SQLGenerationOutput`을 통과해도 SQL이 안전하다는 뜻이 아닙니다. SQL 실행 코드가 없으며 Phase 4에서 별도 SQL Validator를 구현해야 합니다. 질문 수·정답/선택지 관계·원천 section 존재 여부 같은 비즈니스 검증도 해당 Phase에서 추가합니다.
+
+### 통신과 출력 검증
+
+- `OLLAMA_BASE_URL=http://localhost:11434`, `OLLAMA_TIMEOUT_SECONDS=120`을 사용합니다. URL은 HTTP(S) base URL이며 query/fragment/인증정보를 넣지 않습니다.
+- `POST /api/chat`에 `stream=false`, system/user messages를 전송합니다. Schema가 주어지면 `format`에 Pydantic JSON Schema를 넣습니다. 공통 client는 prompt에도 JSON Schema를 포함합니다.
+- 완료된 assistant 메시지의 `content`만 읽습니다. `thinking` metadata는 정답으로 사용하지 않습니다. 불완전한 응답, 잘못된 envelope, 길이 제한으로 중단된 응답은 실패입니다.
+- JSON 객체 하나만 허용합니다. 코드펜스·설명문·여러 JSON·중복 키·NaN/Infinity는 자동 수정하지 않고 실패 처리합니다.
+- Pydantic은 strict validation을 사용하며 알려지지 않은 필드, 필수 키 누락, 잘못된 타입을 거부합니다. Scoring은 0~100의 유한 숫자만 허용합니다. `is_correct`는 null을 허용하지만 키 자체는 필수입니다.
+- HTTPX connect/read/write/pool timeout과 요청 전체 deadline을 모두 적용합니다. **120초는 요청 1회 기준**이며 형식 재시도가 있는 Task는 최대 2회 요청할 수 있습니다.
+- 연결/HTTP/모델 실행 오류는 자동 재시도하지 않습니다. JSON·schema·응답 envelope 검증 실패만 Task 정책에 따라 한 번 재요청합니다. 실패한 원문을 prompt에 다시 붙이지 않습니다.
+- Scoring 실패는 `LLMError`로 상위 계층에 전달합니다. Python fallback 자체는 Phase 7에서 구현하며, 정상 LLM 점수를 재계산하지 않습니다.
+- 취소는 취소 상태 그대로 전달합니다. HTTP redirect를 따라가지 않고 환경변수의 proxy를 자동 사용하지 않습니다.
+- 로그에는 Task 이름·시도 횟수·오류 단계/상태만 기록합니다. prompt, 문서 본문, LLM 응답, upstream 오류 본문은 로그나 API 오류에 넣지 않습니다.
+
+| 오류 code | API status | 의미 |
+| --- | --- | --- |
+| `OLLAMA_UNAVAILABLE` | 503 | 연결/통신 실패 |
+| `OLLAMA_TIMEOUT` | 504 | timeout 또는 요청 전체 deadline 초과 |
+| `OLLAMA_MODEL_NOT_FOUND` | 503 | upstream 404, 모델/엔드포인트 확인 필요 |
+| `OLLAMA_BUSY` | 503 | upstream 429 |
+| `OLLAMA_REQUEST_FAILED` | 502 | 그 외 HTTP 오류/모델 실행 오류 |
+| `LLM_RESPONSE_INVALID` | 502 | envelope/JSON/Pydantic 검증 실패 |
+
+오류는 기존 `{code, message, detail}` 형식을 사용합니다. Service는 공통 `LLMError`를 잡을 수 있으므로 Ollama 예외 타입에 종속되지 않습니다.
+
+### Ollama 없이 검증
+
+아래 명령은 `backend/`에서 실행합니다.
+
+```bash
+uv sync --locked
+uv run pytest -q tests/llm tests/test_config.py
+uv run python scripts/smoke_llm.py
+```
+
+기본 smoke는 `httpx.MockTransport`로 Ollama adapter → JSON parse → Pydantic까지 검증하며 실제 HTTP 연결이 없습니다.
+
+```json
+{"mode":"mock","model":"qwen3.5:4b","result":{"status":"ok"}}
+```
+
+테스트는 Fake Provider와 MockTransport를 사용합니다. LLM 테스트 폴더의 fixture가 실제 HTTP transport 호출을 차단하므로 Ollama가 꺼져 있어도 실행할 수 있습니다. HTTP 요청 형태, timeout, 취소, HTTP 오류, 잘못된 envelope/JSON, schema 검증, 제한된 재시도, Scoring 실패 전달, DI/lifespan, 민감한 내용 미노출을 검사합니다.
+
+### 실제 Ollama 연결은 선택적으로 확인
+
+Ollama를 별도로 설치·실행하고 사용할 모델을 준비한 환경에서:
+
+```bash
+ollama serve                    # 이미 실행 중이라면 생략
+ollama pull qwen3.5:4b           # 별도 터미널, 최초 한 번
+uv run python scripts/smoke_llm.py --live
+```
+
+Live smoke도 SQL/문서를 생성하지 않고 `{"status":"ok"}` 응답만 요청합니다. 모델 선택에는 `SQL_MODEL`을 사용합니다. 연결·출력 검증 실패 시 공통 오류를 출력하고 종료 코드 1을 반환합니다. 이번 Phase의 자동 검증은 mock 기반이며 실제 Qwen3.5-4B 추론은 실행하지 않았습니다.
+
+### Phase 3 검증 결과
+
+- 시작 전 Phase 1~2: 50개 테스트 및 frontend build 통과
+- 변경 후 전체 backend: **156 passed, 5 warnings** (기존 PyMuPDF SWIG deprecation)
+- Mock HTTP 기반 smoke: `status=ok`
+- Alembic schema check: 변경 없음, revision `0001` 유지
+- 기존 frontend build 통과, frontend 파일 변경 없음
+- 기존 PDF→DB 통합 테스트도 전체 테스트에 포함되어 통과
+- 실제 Ollama/Qwen 추론 품질·성능은 미검증이며 live smoke로 별도 확인 가능
+
+### Phase 3 파일
+
+```text
+backend/app/llm/
+  __init__.py
+  provider.py                         # abstract interface
+  ollama_provider.py                  # async REST adapter
+  errors.py                           # 공통 LLM 예외
+  validation.py                       # JSON parse / Pydantic
+  client.py                           # 구조화 응답 / 제한된 재시도
+  dependencies.py                     # Provider 수명 / FastAPI DI
+  prompts/{__init__,sql_generation,document_generation,question_generation,scoring}.py
+  tasks/{__init__,base,sql_task,document_task,question_task,scoring_task}.py
+backend/app/schemas/llm.py
+backend/scripts/smoke_llm.py
+backend/tests/llm/{conftest,test_ollama_provider,test_validation,test_client,test_dependencies}.py
+```
+
+기존 `main.py`, `core/config.py`, `.env.example`, `pyproject.toml`, `uv.lock`, `tests/test_config.py`, README도 갱신했습니다. 실제 생성 기능과 SQL Validator는 이후 Phase에서 이 기반을 사용해 구현합니다.
+
+참고: [Ollama chat API](https://docs.ollama.com/api/chat), [Structured outputs](https://docs.ollama.com/capabilities/structured-outputs), [HTTPX async](https://www.python-httpx.org/async/), [HTTPX MockTransport](https://www.python-httpx.org/advanced/transports/).
+
 ## Migration
 
-Phase 2에서는 기존 6개 모델/테이블을 그대로 사용하며 **추가 migration은 없습니다**.
+Phase 2~3에서는 기존 6개 모델/테이블을 그대로 사용하며 **추가 migration은 없습니다**.
 
 ```bash
 cd backend
@@ -212,7 +335,7 @@ cd frontend
 npm run build
 ```
 
-### 2026-10-01 검증 결과
+### Phase 2 완료 시 검증 결과 (2026-10-01)
 
 - 작업 시작 전 Phase 1: 17개 테스트, frontend build, Alembic schema check 통과
 - 전체 backend 테스트: **50 passed, 5 warnings** (PyMuPDF SWIG deprecation)
@@ -259,6 +382,6 @@ sample-data/metadata/db-handover.expected.json
 
 기존 `app/main.py`, `core/config.py`, `.env.example`, Python/Node 의존성 및 lockfile, `App.tsx`, CSS, `.gitignore`, README를 갱신했습니다. Phase 1 ORM과 migration, 최우선 명세는 변경하지 않았습니다.
 
-이후에는 실제 양식의 표·목차에 대한 parser 정확도와 스캔 품질을 평가해야 합니다. LLMProvider/Ollama 작업은 Phase 3 범위입니다.
+실제 양식의 표·목차에 대한 parser 정확도와 스캔 품질은 계속 평가해야 합니다. 다음 구현 단계는 Phase 4 SQL Retrieval이며, 생성된 SQL은 반드시 SQL Validator를 통과한 뒤에만 실행해야 합니다.
 
 공식 참고: [PaddleOCR OCR 사용법](https://www.paddleocr.ai/latest/en/version3.x/pipeline_usage/OCR.html), [공식 한국어 모델](https://huggingface.co/PaddlePaddle/korean_PP-OCRv5_mobile_rec), [PyMuPDF 이미지 렌더링](https://pymupdf.readthedocs.io/en/latest/recipes-images.html).

@@ -29,3 +29,33 @@ def test_environment_overrides(monkeypatch):
 def test_reject_non_sqlite():
     with pytest.raises(ValidationError, match='requires SQLite'):
         Settings(_env_file=None, database_url='postgresql://localhost/db')
+
+
+@pytest.mark.parametrize('url', ['ftp://localhost:11434', 'localhost:11434', 'http://',
+                                 'http://user:password@localhost:11434',
+                                 'http://localhost:11434?token=secret', 'http://localhost:11434#fragment',
+                                 'http://local host:11434', 'http://localhost:99999', 'http://localhost:0',
+                                 'http://@localhost:11434'])
+def test_invalid_ollama_url(url):
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, ollama_base_url=url)
+
+
+def test_ollama_url_and_timeout_overrides(monkeypatch):
+    monkeypatch.setenv('OLLAMA_BASE_URL', 'http://127.0.0.1:11435/')
+    monkeypatch.setenv('OLLAMA_TIMEOUT_SECONDS', '15')
+    config = Settings(_env_file=None)
+    assert config.ollama_base_url == 'http://127.0.0.1:11435'
+    assert config.ollama_timeout_seconds == 15
+
+
+@pytest.mark.parametrize('field', ['sql_model', 'document_model', 'question_model', 'scoring_model'])
+def test_model_name_cannot_be_empty(field):
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, **{field: '  '})
+
+
+@pytest.mark.parametrize('timeout', [0, -1])
+def test_timeout_must_be_positive(timeout):
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, ollama_timeout_seconds=timeout)

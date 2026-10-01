@@ -11,6 +11,10 @@ from app.core.config import Settings, get_settings
 from app.core.exceptions import register_exception_handlers
 from app.db.session import create_db_engine
 from app.schemas.common import ErrorResponse
+from app.llm.client import StructuredLLMClient
+from app.llm.dependencies import managed_provider
+from app.llm.provider import LLMProvider
+from app.llm.tasks import configure_tasks
 from app.ocr.base import OcrEngine
 from app.ocr.paddle_ocr import PaddleOcrAdapter
 from app.ocr.pdf_renderer import PdfRenderer
@@ -20,7 +24,8 @@ from app.services.document_service import DocumentService
 
 
 def create_app(settings: Settings | None = None, *, ocr_engine: OcrEngine | None = None,
-               section_parser: SectionParser | None = None) -> FastAPI:
+               section_parser: SectionParser | None = None,
+               llm_provider: LLMProvider | None = None) -> FastAPI:
     settings = settings or get_settings()
 
     @asynccontextmanager
@@ -37,7 +42,11 @@ def create_app(settings: Settings | None = None, *, ocr_engine: OcrEngine | None
         )
         try:
             app.state.document_pipeline.recover_interrupted()
-            yield
+            async with managed_provider(settings, llm_provider) as provider:
+                app.state.llm_provider = provider
+                app.state.llm_client = StructuredLLMClient(provider)
+                app.state.llm_tasks = configure_tasks(settings)
+                yield
         finally:
             engine.dispose()
 
