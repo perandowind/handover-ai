@@ -2,6 +2,7 @@ import json
 
 import pytest
 
+from app.core.handover import HANDOVER_OUTLINE
 from app.llm.errors import LLMResponseInvalidError
 from app.llm.validation import parse_and_validate
 from app.schemas.llm import (
@@ -56,7 +57,8 @@ def test_overflow_to_infinity_is_rejected():
 
 def test_nested_document_contract():
     result = parse_and_validate(json.dumps({'title': '인수인계서', 'sections': [
-        {'section_type': 'overview', 'title': '업무 개요', 'content': '관련 정보 없음'},
+        {'section_type': key, 'title': title, 'content': '관련 정보 없음'}
+        for key, title in HANDOVER_OUTLINE
     ]}), GeneratedDocument)
     assert result.sections[0].content == '관련 정보 없음'
     with pytest.raises(LLMResponseInvalidError):

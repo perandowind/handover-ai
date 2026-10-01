@@ -7,6 +7,9 @@ from sqlalchemy.orm import sessionmaker
 
 from app.api.documents import router as documents_router
 from app.api.health import router as health_router
+from app.api.generation import router as generation_router
+from app.llm.tasks.document_task import DocumentGenerationTask
+from app.services.handover_generation_service import HandoverGenerationService
 from app.api.retrieval import router as retrieval_router
 from app.retrieval.dependencies import create_retrieval_service
 from app.core.config import Settings, get_settings
@@ -49,6 +52,11 @@ def create_app(settings: Settings | None = None, *, ocr_engine: OcrEngine | None
                 app.state.llm_client = StructuredLLMClient(provider)
                 app.state.llm_tasks = configure_tasks(settings)
                 app.state.retrieval_service = create_retrieval_service(settings, app.state.llm_client)
+                app.state.handover_generation_service = HandoverGenerationService(
+                    app.state.retrieval_service,
+                    DocumentGenerationTask(app.state.llm_client, app.state.llm_tasks['document_generation']),
+                    app.state.session_factory,
+                )
                 yield
         finally:
             engine.dispose()
@@ -66,6 +74,7 @@ def create_app(settings: Settings | None = None, *, ocr_engine: OcrEngine | None
     app.include_router(health_router, prefix="/api")
     app.include_router(documents_router, prefix="/api")
     app.include_router(retrieval_router, prefix="/api")
+    app.include_router(generation_router, prefix="/api")
     return app
 
 

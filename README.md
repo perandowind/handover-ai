@@ -1,7 +1,7 @@
 # Handover AI — Prototype v1
 
 스캔 이미지 PDF 기반 인수인계서 자동 작성 및 분석 시스템입니다.
-최우선 명세는 [PROTOTYPE_SPEC.md](PROTOTYPE_SPEC.md)이며, 현재 **Phase 1~4 — Project Skeleton / Document Pipeline / LLM Infrastructure / SQL Retrieval**까지 구현했습니다.
+최우선 명세는 [PROTOTYPE_SPEC.md](PROTOTYPE_SPEC.md)이며, 현재 **Phase 1~5 — Project Skeleton / Document Pipeline / LLM Infrastructure / SQL Retrieval / Handover Generation**까지 구현했습니다.
 
 ## 현재 범위
 
@@ -14,10 +14,11 @@ PDF 업로드 → 파일 검증 → 페이지 PNG 렌더링 → PaddleOCR
 - PyMuPDF 이미지 렌더링 (기본 200 DPI)
 - PaddleOCR 3.3.3 + PaddlePaddle 3.2.2 CPU
 - `PP-OCRv5_mobile_det` + `korean_PP-OCRv5_mobile_rec`
-- React + TypeScript + Vite + React Router: Upload, Documents, 문서 상세
+- React + TypeScript + Vite + React Router: Upload, Documents, 문서 상세, Generate/Preview
 - LLMProvider 추상화, Ollama REST adapter, 공통 JSON/Pydantic 검증, Task별 설정·프롬프트 구현
 - 자연어 → SQL Generation → SQL Validator → 읽기 전용 SQLite 조회 → Context 구성
-- 문서·문제 생성 서비스, 채점/Python fallback, PDF Export는 이후 Phase 범위
+- 조회 Context 기반 인수인계서 생성, 기본 8개 목차 검증, React Preview
+- 문제 생성, 채점/Python fallback, PDF Export는 이후 Phase 범위
 - PP-StructureV3를 호출하거나 별도 필수 의존성으로 사용하지 않습니다.
 - PDF 텍스트를 직접 추출하는 처리 경로는 없습니다. 입력은 항상 이미지로 렌더링하여 OCR합니다.
 
@@ -86,6 +87,7 @@ PaddleOCR adapter는 PP-OCRv5 모델명을 명시합니다. 라이브러리 기�
 | `GET /api/documents/{id}` | 상태·페이지 OCR·섹션·업무 항목·처리 오류 |
 | `GET /api/documents/{id}/sections` | 원천 페이지와 순서를 포함한 섹션 |
 | `POST /api/retrieval/search` | 자연어 요청으로 검증된 SQL 조회 및 Context 반환 |
+| `POST /api/generation/handover` | 조회 Context 기반 인수인계서 JSON 생성 |
 
 저장소의 `sample-data/scanned-pdfs/db-handover-scan.pdf`는 2페이지 합성 한국어 이미지 전용 PDF입니다. 실제 기업 기밀 데이터는 없습니다.
 
@@ -291,13 +293,13 @@ backend/scripts/smoke_llm.py
 backend/tests/llm/{conftest,test_ollama_provider,test_validation,test_client,test_dependencies}.py
 ```
 
-기존 `main.py`, `core/config.py`, `.env.example`, `pyproject.toml`, `uv.lock`, `tests/test_config.py`, README도 갱신했습니다. Phase 4의 SQL Generation/Validator가 이 기반을 사용하며, 문서·문제 생성과 채점은 이후 Phase 범위입니다.
+기존 `main.py`, `core/config.py`, `.env.example`, `pyproject.toml`, `uv.lock`, `tests/test_config.py`, README도 갱신했습니다. Phase 4의 SQL Generation/Validator와 Phase 5의 DocumentGenerationTask가 이 기반을 사용하며, 문제 생성과 채점은 이후 Phase 범위입니다.
 
 참고: [Ollama chat API](https://docs.ollama.com/api/chat), [Structured outputs](https://docs.ollama.com/capabilities/structured-outputs), [HTTPX async](https://www.python-httpx.org/async/), [HTTPX MockTransport](https://www.python-httpx.org/advanced/transports/).
 
 ## Migration
 
-Phase 2~4에서는 기존 6개 모델/테이블을 그대로 사용하며 **추가 migration은 없습니다**.
+Phase 2~5에서는 기존 6개 모델/테이블을 그대로 사용하며 **추가 migration은 없습니다**.
 
 ```bash
 cd backend
@@ -384,7 +386,7 @@ sample-data/metadata/db-handover.expected.json
 
 기존 `app/main.py`, `core/config.py`, `.env.example`, Python/Node 의존성 및 lockfile, `App.tsx`, CSS, `.gitignore`, README를 갱신했습니다. Phase 1 ORM과 migration, 최우선 명세는 변경하지 않았습니다.
 
-실제 양식의 표·목차에 대한 parser 정확도와 스캔 품질은 계속 평가해야 합니다. Phase 4 SQL Retrieval은 아래에 설명합니다. 다음 단계의 문서 생성은 검증된 조회 결과와 Context를 사용해야 합니다.
+실제 양식의 표·목차에 대한 parser 정확도와 스캔 품질은 계속 평가해야 합니다. Phase 4 SQL Retrieval과 Phase 5 문서 생성은 아래에 설명합니다. 문서 생성에는 검증된 조회 결과로 구성한 Context를 사용합니다.
 
 공식 참고: [PaddleOCR OCR 사용법](https://www.paddleocr.ai/latest/en/version3.x/pipeline_usage/OCR.html), [공식 한국어 모델](https://huggingface.co/PaddlePaddle/korean_PP-OCRv5_mobile_rec), [PyMuPDF 이미지 렌더링](https://pymupdf.readthedocs.io/en/latest/recipes-images.html).
 
@@ -466,4 +468,106 @@ backend/app/retrieval/{__init__,base,schema,validator,executor,sql_strategy,cont
 backend/tests/retrieval/{conftest,test_validator,test_context,test_integration}.py
 ```
 
-기존 `app/llm/tasks/sql_task.py`, `app/llm/prompts/sql_generation.py`, `app/main.py`, `app/core/config.py`, `.env.example`, `pyproject.toml`, `uv.lock`, README를 수정했습니다. 프런트엔드·ORM·migration·최우선 명세는 변경하지 않았습니다. Vector Retrieval/DB 및 문서·문제 생성은 구현하지 않았습니다.
+기존 `app/llm/tasks/sql_task.py`, `app/llm/prompts/sql_generation.py`, `app/main.py`, `app/core/config.py`, `.env.example`, `pyproject.toml`, `uv.lock`, README를 수정했습니다. 프런트엔드·ORM·migration·최우선 명세는 변경하지 않았습니다. Phase 4 시점에는 Vector Retrieval/DB 및 문서·문제 생성을 구현하지 않았습니다.
+
+
+## Phase 5 — Handover Document Generation
+
+사용자 요청 → Phase 4 Retrieval → ContextBuilder → DocumentGenerationTask → JSON/Pydantic 검증 → React Preview를 연결했습니다. 저장된 원문을 조회하며 생성 결과는 API 응답과 화면 상태로만 유지합니다. 결과 저장용 테이블이나 PDF Export는 추가하지 않았습니다.
+
+### 사용 방법
+
+기존 backend/frontend 실행 명령을 그대로 사용합니다. Ollama에 `SQL_MODEL`과 `DOCUMENT_MODEL`이 준비되어 있어야 하며, 기본값은 각각 `qwen3.5:4b`입니다. 별도 의존성·환경변수·migration 추가는 없습니다.
+
+1. PDF를 업로드하고 OCR/구조화 완료를 확인합니다.
+2. React의 **인수인계서 생성** 메뉴(`/generate`)로 이동합니다.
+3. 작성 요청을 입력하고 필요하면 대상 문서를 선택합니다. 문서는 20개씩 조회하며 여러 페이지의 선택을 유지합니다.
+4. **인수인계서 생성**을 누르면 조회와 생성이 순차 실행됩니다. 대기 중에는 중복 제출과 입력을 막습니다.
+5. 기본 8개 목차의 결과를 미리보기에서 확인합니다. 본문은 HTML 실행 없이 평문과 줄바꿈으로 표시합니다.
+
+```bash
+curl -sS http://127.0.0.1:8000/api/generation/handover \
+  -H 'Content-Type: application/json' \
+  -d '{"prompt":"DB 운영 업무를 담당할 신규 인계자를 위한 인수인계서를 작성해줘.","document_ids":[1]}'
+```
+
+요청의 `prompt`는 공백 제거 후 1~4,000자입니다. `document_ids`는 선택 사항이며 생략/null/빈 배열이면 전체 범위에서 검색합니다. 지정하는 경우 중복 없는 양의 정수 ID를 최대 100개 받습니다. 존재하지 않는 ID는 HTTP 404 `DOCUMENT_NOT_FOUND`, OCR/구조화 미완료 문서는 HTTP 409 `DOCUMENT_NOT_READY`로 LLM 호출 전에 거부합니다.
+
+선택 ID는 프롬프트에만 전달하지 않습니다. SQL Validator가 모든 조회 테이블의 문서 ID에 대해 AST 조건을 추가하여 정렬/집계/LIMIT 전에 범위를 제한합니다. LEFT JOIN은 ON 조건을 제한하여 오른쪽 문서가 없는 왼쪽 결과는 보존합니다. 기존 `/api/retrieval/search`의 비선택 검색 동작은 유지합니다.
+
+응답은 명세의 `GeneratedDocument`입니다.
+
+```json
+{
+  "title": "DB 운영 인수인계서",
+  "sections": [
+    {"section_type":"overview", "title":"업무 개요", "content":"관련 정보 없음"},
+    {"section_type":"responsibilities", "title":"주요 업무", "content":"관련 정보 없음"},
+    {"section_type":"systems", "title":"관련 시스템", "content":"관련 정보 없음"},
+    {"section_type":"procedures", "title":"업무 절차", "content":"관련 정보 없음"},
+    {"section_type":"precautions", "title":"주의사항", "content":"관련 정보 없음"},
+    {"section_type":"troubleshooting", "title":"장애 대응", "content":"관련 정보 없음"},
+    {"section_type":"contacts", "title":"담당자 및 연락처", "content":"관련 정보 없음"},
+    {"section_type":"references", "title":"참고자료", "content":"관련 정보 없음"}
+  ]
+}
+```
+
+### 생성 정책과 검증
+
+- 기본 목차는 `core/handover.py`에 중앙 관리합니다. 기존 `GeneratedDocument`/`GeneratedSection`에 8개 목차의 순서·중복·제목 일치 검증을 추가했습니다. 문서 제목은 최대 200자, 섹션 본문은 최대 12,000자이며 공백 본문·잘못된 타입·추가 필드는 거부합니다.
+- 사용자 요청은 작성 목적이며 사실 근거가 아닙니다. DocumentGenerationTask는 원문 조회로 만든 제한된 Context와 목차를 JSON 데이터로 묶어 전달합니다. 서비스는 Ollama나 모델명을 직접 사용하지 않고 기존 Provider/Task 설정을 사용합니다.
+- 프롬프트에 Context 밖의 사실, 일반 지식/권장사항, 임의의 담당자·연락처·명령어·시스템·일정·수치를 추가하지 말라고 명시했습니다. 원문과 사용자 요청 안의 규칙 변경 지시도 따르지 않도록 합니다.
+- 섹션 근거가 없으면 정확히 **관련 정보 없음**, 부분 근거만 있으면 확인된 내용만 사용하도록 지시합니다. 축약된 Context의 생략 내용도 추측하지 않습니다.
+- 조회 Context가 비어 있으면 Document LLM을 호출하지 않고 8개 섹션 전체를 **관련 정보 없음**으로 구성한 Pydantic 객체를 반환합니다. SQL Retrieval 단계는 그대로 수행합니다.
+- Document JSON/스키마 검증 실패는 같은 Context로 **1회 재시도**하며 Retrieval은 반복하지 않습니다. 두 번째 실패는 HTTP 502 `LLM_RESPONSE_INVALID`; Provider 연결/timeout은 기존 오류를 그대로 반환합니다.
+- Pydantic은 형식과 목차를 검증합니다. 비어 있지 않은 Context에 대한 **문장의 사실 일치까지 자동 보증하지는 않습니다**. 실제 모델이 근거 없는 세부사항을 보충하는지 평가하고 원문과 대조해야 합니다.
+
+### Phase 5 검증 결과 (2026-10-01)
+
+```bash
+cd backend
+uv run pytest -q tests/generation
+uv run pytest -q
+uv run alembic check
+```
+
+프런트엔드 빌드는 `cd frontend && npm run build`입니다.
+
+- Phase 5 신규 unit/integration 테스트: **52 passed**.
+- 전체 backend: **313 passed, 5 warnings**. 기존 PyMuPDF SWIG deprecation warning만 있습니다.
+- 실제 임시 SQLite/Alembic + Mock Provider로 자연어 요청 → 검증된 SQL → 조회/Context → DocumentGenerationTask → Pydantic → API 응답을 확인했습니다.
+- 선택 ID 누락/OR 우회 시도, JOIN/LEFT JOIN/집계의 문서 범위, Context 제한, 빈 결과, 잘못된 목차, 재시도 횟수, Provider 오류, 원본 DB 미변경을 검증했습니다.
+- 기존 Phase 3 테스트의 'Generation API 없음' 및 임시 단일 섹션 contract 기대값을 이번 Phase의 API/8개 목차 정책에 맞게 갱신했습니다.
+- TypeScript/Vite build 및 Alembic schema check 통과. 기존 revision `0001` 유지.
+- 브라우저에서 대상 문서 선택, 생성 대기/버튼 비활성화, 8개 목차 Preview, 관련 정보 없음, 실패 메시지와 버튼 복구를 확인했습니다. 기존 실제 OCR 샘플 DB의 **임시 복사본 + Mock Provider**를 사용했으며 운영 DB는 수정하지 않았습니다.
+- 실제 Qwen 모델의 생성 품질과 hallucination 비율은 이번 검증에 포함하지 않았습니다. 다음 Phase 전에는 실제 모델로 한국어 요청·정보 부족·문서 안의 지시문 사례를 확인해야 합니다.
+
+### Phase 5 파일
+
+신규:
+
+```text
+backend/app/core/handover.py
+backend/app/schemas/generation.py
+backend/app/api/generation.py
+backend/app/services/handover_generation_service.py
+backend/tests/generation/{conftest,test_task,test_generation_integration}.py
+frontend/src/types/generation.ts
+frontend/src/pages/Generate.tsx
+frontend/src/components/GeneratedDocumentPreview.tsx
+```
+
+수정:
+
+```text
+backend/app/llm/prompts/document_generation.py
+backend/app/llm/tasks/{document_task,sql_task}.py
+backend/app/schemas/llm.py
+backend/app/services/retrieval_service.py
+backend/app/retrieval/{base,sql_strategy,validator}.py
+backend/app/main.py
+backend/tests/llm/{test_dependencies,test_validation}.py
+frontend/src/{App.tsx,style.css}
+README.md
+```

@@ -10,7 +10,7 @@ class SqlRetrievalStrategy(RetrievalStrategy):
         self.task = task
         self.reader = reader
 
-    async def retrieve(self, query: str) -> RetrievedData:
-        validated = await self.task.generate(query)
+    async def retrieve(self, query: str, *, document_ids: list[int] | None = None) -> RetrievedData:
+        validated = await self.task.generate(query, document_ids=document_ids)
         rows = await run_in_threadpool(self.reader.execute, validated)
         return RetrievedData(rows=rows, sql=validated.sql)

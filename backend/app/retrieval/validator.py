@@ -49,7 +49,10 @@ class SQLValidator:
         self.schema = schema
         self.max_rows = max_rows
 
-    def validate(self, sql: str) -> ValidatedSQL:
+    def validate(self, sql: str, *, document_ids: list[int] | None = None) -> ValidatedSQL:
+        if document_ids is not None and (not document_ids or len(document_ids) > 100
+                or any(type(value) is not int or not 0 < value < 2**63 for value in document_ids)):
+            raise SQLValidationError('INVALID_DOCUMENT_SCOPE')
         if not isinstance(sql, str) or not sql.strip() or len(sql) > MAX_SQL_CHARS:
             raise SQLValidationError('INVALID_SQL_LENGTH')
         try:
@@ -98,6 +101,20 @@ class SQLValidator:
                 limit = min(self._integer(query.args['limit'].expression), self.max_rows)
             if query.args.get('offset') is not None:
                 self._integer(query.args['offset'].expression)
+            if document_ids is not None:
+                # Trusted AST predicates, applied before grouping/LIMIT. The LLM
+                # cannot widen scope with OR, omitted IDs, or a projection without IDs.
+                # A nullable LEFT JOIN may stay absent, but never contribute a
+                # nonselected document. Restrict its ON clause to preserve left rows.
+                joined = {join.this.alias_or_name: join for join in query.args.get('joins', [])}
+                for alias, table_name in aliases.items():
+                    key = 'id' if table_name == 'documents' else 'document_id'
+                    predicate = exp.column(key, table=alias, quoted=True).isin(*document_ids)
+                    join = joined.get(alias)
+                    if join is not None and join.args.get('side') == 'LEFT':
+                        join.set('on', exp.and_(join.args['on'], predicate))
+                    else:
+                        query.where(predicate, append=True, copy=False)
             query = query.limit(limit)
             return ValidatedSQL(
                 query.sql(dialect='sqlite', comments=False, unsupported_level=ErrorLevel.RAISE), limit,

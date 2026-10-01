@@ -38,11 +38,12 @@ class SQLGenerationTask:
         self.schema = schema
         self.validator = validator
 
-    async def generate(self, query: str) -> ValidatedSQL:
+    async def generate(self, query: str, *, document_ids: list[int] | None = None) -> ValidatedSQL:
         feedback = None
         for attempt in range(2):
             prompt = json.dumps({
                 'request': query,
+                'document_ids': document_ids,
                 'schema': self.schema.describe(),
                 'max_rows': self.validator.max_rows,
                 'previous_validation_error': feedback,
@@ -50,7 +51,7 @@ class SQLGenerationTask:
             try:
                 output = await self.client.generate(task=self.definition, user_prompt=prompt)
                 logger.debug('Generated retrieval SQL: %s', output.sql)
-                validated = self.validator.validate(output.sql)
+                validated = self.validator.validate(output.sql, document_ids=document_ids)
                 logger.info('SQL validation passed attempt=%s', attempt + 1)
                 return validated
             except (LLMResponseInvalidError, SQLValidationError) as exc:

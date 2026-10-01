@@ -8,8 +8,8 @@ class RetrievalService:
         self.strategy = strategy
         self.context_builder = context_builder
 
-    async def search(self, query: str) -> RetrievalResponse:
-        result = await self.strategy.retrieve(query)
+    async def search(self, query: str, *, document_ids: list[int] | None = None) -> RetrievalResponse:
+        result = await self.strategy.retrieve(query, document_ids=document_ids)
         context = self.context_builder.build(result.rows)
         return RetrievalResponse(sql=result.sql or '', rows=result.rows,
                                  row_count=len(result.rows), context=context.text,

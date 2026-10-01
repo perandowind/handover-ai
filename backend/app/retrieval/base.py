@@ -10,6 +10,6 @@ class RetrievedData:
 
 class RetrievalStrategy(ABC):
     @abstractmethod
-    async def retrieve(self, query: str) -> RetrievedData:
+    async def retrieve(self, query: str, *, document_ids: list[int] | None = None) -> RetrievedData:
         """Return ordered evidence rows without generating final documents."""
         raise NotImplementedError
