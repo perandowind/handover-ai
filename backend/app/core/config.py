@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     document_model: str = "qwen3.5:4b"
     question_model: str = "qwen3.5:4b"
     scoring_model: str = "qwen3.5:4b"
+    pdf_export_timeout_seconds: int = Field(default=60, gt=0)
     pdf_render_dpi: int = Field(default=200, ge=72, le=300)
     max_upload_bytes: int = Field(default=50 * 1024 * 1024, gt=0)
     max_pdf_pages: int = Field(default=30, gt=0)

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<style>
+body { font-family: sans-serif; font-size: 10.5pt; line-height: 1.55; color: #253245; }
+h1 { font-size: 21pt; line-height: 1.35; color: #153651; margin: 0 0 20pt; }
+h2 { font-size: 13pt; color: #153651; margin: 18pt 0 7pt; page-break-after: avoid; }
+p { margin: 0 0 5pt; orphans: 2; widows: 2; }
+.subtitle { font-size: 9pt; color: #607083; margin-bottom: 12pt; }
+.missing { color: #607083; }
+</style>
+</head>
+<body>
+<p class="subtitle">HANDOVER DOCUMENT</p>
+<h1>{{ document.title | soft_wrap(18) }}</h1>
+{% for section in document.sections %}
+<h2>{{ loop.index }}. {{ section.title }}</h2>
+<p{% if section.content == '관련 정보 없음' %} class="missing"{% endif %}>{% for line in section.content.split('\n') %}{{ line | soft_wrap }}{% if not loop.last %}<br>{% endif %}{% endfor %}</p>
+{% endfor %}
+</body>
+</html>

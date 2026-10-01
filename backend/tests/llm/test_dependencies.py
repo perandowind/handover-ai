@@ -43,7 +43,7 @@ def test_application_starts_without_ollama_and_excludes_future_routes(tmp_path):
         paths = client.get('/openapi.json').json()['paths']
         assert '/api/documents/upload' in paths
         assert '/api/generation/handover' in paths
-        assert '/api/generation/handover/pdf' not in paths
+        assert '/api/generation/handover/pdf' in paths
         assert not any(path.startswith(('/api/questions', '/api/scoring')) for path in paths)
 
 

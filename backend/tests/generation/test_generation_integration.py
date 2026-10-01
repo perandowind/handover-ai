@@ -78,7 +78,7 @@ def test_end_to_end_selected_document_and_no_persistence(generation_factory, doc
         assert response.json() == document_body
         assert client.get('/api/documents').json() == before
         assert client.get('/api/health').json() == {'status': 'ok'}
-        assert '/api/generation/handover/pdf' not in client.get('/openapi.json').json()['paths']
+        assert '/api/generation/handover/pdf' in client.get('/openapi.json').json()['paths']
     assert [call['model'] for call in provider.calls] == ['test-sql', 'test-document']
     assert [call['response_schema'] for call in provider.calls] == [SQLGenerationOutput, GeneratedDocument]
     payload = json.loads(provider.calls[1]['user_prompt'])

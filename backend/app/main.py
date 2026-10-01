@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import sessionmaker
 
+from app.rendering.pdf_exporter import PdfExporter
 from app.api.documents import router as documents_router
 from app.api.health import router as health_router
 from app.api.generation import router as generation_router
@@ -39,6 +40,7 @@ def create_app(settings: Settings | None = None, *, ocr_engine: OcrEngine | None
         engine = create_db_engine(settings.database_url)
         app.state.session_factory = sessionmaker(bind=engine, expire_on_commit=False)
         app.state.settings = settings
+        app.state.document_exporter = PdfExporter(settings.export_dir, settings.pdf_export_timeout_seconds)
         renderer = PdfRenderer(settings)
         app.state.document_service = DocumentService(settings, renderer)
         app.state.document_pipeline = DocumentPipeline(

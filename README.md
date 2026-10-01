@@ -1,7 +1,7 @@
 # Handover AI — Prototype v1
 
 스캔 이미지 PDF 기반 인수인계서 자동 작성 및 분석 시스템입니다.
-최우선 명세는 [PROTOTYPE_SPEC.md](PROTOTYPE_SPEC.md)이며, 현재 **Phase 1~5 — Project Skeleton / Document Pipeline / LLM Infrastructure / SQL Retrieval / Handover Generation**까지 구현했습니다.
+최우선 명세는 [PROTOTYPE_SPEC.md](PROTOTYPE_SPEC.md)이며, 현재 **Phase 1~6 — Project Skeleton / Document Pipeline / LLM Infrastructure / SQL Retrieval / Handover Generation / PDF Export**까지 구현했습니다.
 
 ## 현재 범위
 
@@ -18,7 +18,8 @@ PDF 업로드 → 파일 검증 → 페이지 PNG 렌더링 → PaddleOCR
 - LLMProvider 추상화, Ollama REST adapter, 공통 JSON/Pydantic 검증, Task별 설정·프롬프트 구현
 - 자연어 → SQL Generation → SQL Validator → 읽기 전용 SQLite 조회 → Context 구성
 - 조회 Context 기반 인수인계서 생성, 기본 8개 목차 검증, React Preview
-- 문제 생성, 채점/Python fallback, PDF Export는 이후 Phase 범위
+- Jinja2 HTML → PyMuPDF Story PDF 및 React 다운로드
+- 문제 생성, 채점/Python fallback은 이후 Phase 범위
 - PP-StructureV3를 호출하거나 별도 필수 의존성으로 사용하지 않습니다.
 - PDF 텍스트를 직접 추출하는 처리 경로는 없습니다. 입력은 항상 이미지로 렌더링하여 OCR합니다.
 
@@ -88,6 +89,7 @@ PaddleOCR adapter는 PP-OCRv5 모델명을 명시합니다. 라이브러리 기�
 | `GET /api/documents/{id}/sections` | 원천 페이지와 순서를 포함한 섹션 |
 | `POST /api/retrieval/search` | 자연어 요청으로 검증된 SQL 조회 및 Context 반환 |
 | `POST /api/generation/handover` | 조회 Context 기반 인수인계서 JSON 생성 |
+| `POST /api/generation/handover/pdf` | 기존 GeneratedDocument JSON을 PDF로 다운로드 |
 
 저장소의 `sample-data/scanned-pdfs/db-handover-scan.pdf`는 2페이지 합성 한국어 이미지 전용 PDF입니다. 실제 기업 기밀 데이터는 없습니다.
 
@@ -299,7 +301,7 @@ backend/tests/llm/{conftest,test_ollama_provider,test_validation,test_client,tes
 
 ## Migration
 
-Phase 2~5에서는 기존 6개 모델/테이블을 그대로 사용하며 **추가 migration은 없습니다**.
+Phase 2~6에서는 기존 6개 모델/테이블을 그대로 사용하며 **추가 migration은 없습니다**.
 
 ```bash
 cd backend
@@ -571,3 +573,105 @@ backend/tests/llm/{test_dependencies,test_validation}.py
 frontend/src/{App.tsx,style.css}
 README.md
 ```
+
+
+## Phase 6 — PDF Export
+
+기존 `GeneratedDocument`와 `GeneratedSection` 구조·검증은 그대로 유지합니다. PDF 요청은 이미 생성된 JSON을 받아 `DocumentExporter` → `PdfExporter` → Jinja2 HTML → PyMuPDF Story → PDF 순서로 처리합니다. LLM이나 Retrieval을 다시 호출하지 않습니다.
+
+### Renderer 선택과 설치
+
+이미 OCR 페이지 렌더링에 사용하는 **PyMuPDF Story**를 HTML-to-PDF renderer로 재사용합니다. macOS arm64의 현재 Python 3.12 환경에서 추가 Chromium/WebKit 실행 파일이나 Cairo/Pango 설치 없이 동작하는 것을 확인했습니다. Story의 내장 CJK fallback 글꼴을 사용하고 PDF에 subset으로 포함하여 한글을 표시합니다. 새 의존성은 Jinja2뿐입니다.
+
+```bash
+cd backend
+uv sync --locked
+uv run uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+기존 `.env`에는 필요하면 아래 설정을 병합하세요.
+
+```env
+EXPORT_DIR=./data/exports
+PDF_EXPORT_TIMEOUT_SECONDS=60
+```
+
+기본값을 그대로 써도 됩니다. DB/migration 변경은 없습니다.
+
+렌더링은 요청별 별도 Python subprocess에서 수행하여 API/OCR 스레드와 native renderer 상태를 공유하지 않습니다. FastAPI의 동기 endpoint가 thread pool에서 기다리며, 지정된 timeout이 지나면 자식 프로세스를 종료하고 오류를 반환합니다. 별도 장기 실행 worker나 queue는 추가하지 않았습니다.
+
+공식 근거: [PyMuPDF Stories](https://pymupdf.readthedocs.io/en/latest/recipes-stories.html), [Story 및 내장 글꼴 설명](https://pymupdf.readthedocs.io/en/latest/tutorial.html).
+
+### 다운로드
+
+React Generate 화면에서 생성 결과의 **PDF 다운로드** 버튼을 누르세요. 현재 Preview JSON을 전송하며, 처리 중에는 버튼을 비활성화합니다. 실패 시 오류를 표시하고 다시 시도할 수 있습니다. 화면 이동이나 생성 결과 교체 시 이전 다운로드 요청은 취소합니다.
+
+API 직접 호출:
+
+```bash
+# generated-document.json은 POST /api/generation/handover에서 받은 전체 JSON
+curl --fail-with-body http://127.0.0.1:8000/api/generation/handover/pdf \
+  -H 'Content-Type: application/json' \
+  --data-binary @generated-document.json \
+  --output handover.pdf
+```
+
+성공 응답은 `application/pdf`, `Content-Disposition: attachment; filename="handover.pdf"`, `Cache-Control: no-store`입니다. 잘못된 JSON/목차는 기존 Pydantic 정책에 따라 HTTP 422로 거부합니다. 생성 실패는 HTTP 500 `PDF_EXPORT_FAILED`, timeout은 HTTP 504 `PDF_EXPORT_FAILED`이며 공통 JSON 오류 형식을 사용합니다. API를 curl로 호출할 때는 HTTP 성공 여부도 확인하세요.
+
+A4, 8개 기본 목차, 한글/영문 본문, 줄바꿈, 자동 페이지 나눔, 페이지 번호를 지원합니다. 긴 URL/식별자에는 HTML 표시 단계에서 보이지 않는 줄바꿈 기회를 넣으며 원본 JSON은 수정하지 않습니다. PDF에서 복사한 긴 문자열에는 줄바꿈/공백이 들어갈 수 있습니다. Jinja2 autoescape를 사용하여 본문의 HTML·script·파일 URL을 마크업으로 실행하지 않고 평문으로 표시합니다. 외부 asset Archive는 제공하지 않습니다.
+
+### Export 파일 관리
+
+- `EXPORT_DIR` 아래에 접근 권한을 제한한 고유 `handover-export-*` 임시 디렉터리를 요청마다 생성합니다.
+- 제목이나 사용자 입력을 파일 경로에 사용하지 않습니다. HTML은 stdin으로만 전달하고 디스크에 저장하지 않습니다.
+- PDF를 생성·검사한 후 응답 bytes로 읽고 임시 디렉터리를 삭제합니다. 생성 실패/timeout에서도 정리하며 동시 요청은 파일을 공유하지 않습니다.
+- 렌더링은 최대 100페이지, 응답 파일은 최대 20 MiB로 제한합니다. 초과 시 불완전한 PDF를 내려보내지 않고 오류로 반환합니다.
+- 서버에 다운로드 이력을 영구 보관하지 않습니다. 사용자가 받은 파일은 브라우저 다운로드 위치에 남습니다.
+- 강제 종료/전원 차단 시 임시 폴더가 남을 수 있습니다. 모든 서버/렌더러를 중지한 뒤 `EXPORT_DIR`의 해당 `handover-export-*` 잔여 폴더만 수동 정리할 수 있습니다. 자동으로 다른 파일을 삭제하는 정책은 없습니다.
+
+### Phase 6 검증 결과 (2026-10-02)
+
+```bash
+cd backend
+uv run pytest -q tests/rendering
+uv run pytest -q
+uv run alembic check
+```
+
+프런트엔드는 `cd frontend && npm run build`로 검사합니다.
+
+- 신규 PDF 테스트 **18 passed**, 전체 backend **331 passed, 5 warnings**. 기존 PyMuPDF SWIG deprecation warning만 발생했습니다.
+- 실제 PDF 생성/한글 추출/글꼴 포함/페이지 번호, 긴 본문과 긴 식별자의 줄바꿈·페이지 경계, HTML escape, 동시 export 격리, 성공·실패·timeout 파일 정리, 잘못된 API 입력 및 LLM 미호출을 검증했습니다.
+- TypeScript/Vite build 및 Alembic schema check 통과. 기존 revision `0001` 유지.
+- Poppler로 단일 페이지 및 5페이지 출력 전체를 이미지로 렌더링하여 한글 글꼴·여백·페이지 번호·본문 잘림을 시각적으로 확인했습니다. Poppler는 검증용 도구이며 애플리케이션 의존성이 아닙니다.
+- 브라우저에서 기존 OCR 샘플의 임시 DB 복사본 + Mock Provider로 Preview를 만든 뒤, 실제 PDF renderer를 통해 다운로드한 37,412-byte PDF의 제목과 페이지를 확인했습니다. PDF Export 자체에는 Mock renderer를 사용하지 않았습니다.
+- Phase 5의 'PDF endpoint 없음' 기대값 두 곳만 새 endpoint 존재 확인으로 갱신했습니다. 기존 GeneratedDocument schema는 변경하지 않았습니다.
+
+### Phase 6 파일
+
+신규:
+
+```text
+backend/app/rendering/{__init__,base,template_renderer,pdf_exporter,pdf_worker}.py
+backend/app/rendering/templates/handover.html
+backend/tests/rendering/test_pdf_export.py
+frontend/src/components/PdfDownloadButton.tsx
+```
+
+수정:
+
+```text
+backend/app/api/generation.py
+backend/app/core/config.py
+backend/app/main.py
+backend/.env.example
+backend/pyproject.toml
+backend/uv.lock
+backend/tests/llm/test_dependencies.py
+backend/tests/generation/test_generation_integration.py
+frontend/src/api/client.ts
+frontend/src/components/GeneratedDocumentPreview.tsx
+README.md
+```
+
+DOCX/Google Docs Export는 구현하지 않았습니다. 이후 Phase 전에는 실제 업무 문서의 글자 종류·최대 본문 길이·원하는 출력 양식으로 확인하세요. 임의 CSS/표/이미지를 입력하는 범용 HTML 변환 API는 제공하지 않습니다.
