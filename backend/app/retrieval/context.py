@@ -2,6 +2,7 @@ import json
 from dataclasses import dataclass
 
 _LABELS = {
+    'source_section_id': '원천 섹션 ID',
     'id': 'ID', 'document_id': '문서 ID', 'section_id': '섹션 ID',
     'title': '문서 제목', 'document_type': '문서 유형', 'department': '부서',
     'section_type': '섹션 유형', 'section_title': '섹션 제목', 'content': '내용',

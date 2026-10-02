@@ -6,6 +6,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import sessionmaker
 
 from app.rendering.pdf_exporter import PdfExporter
+from app.api.questions import router as questions_router
+from app.api.scoring import router as scoring_router
+from app.llm.tasks.question_task import QuestionGenerationTask
+from app.llm.tasks.scoring_task import ScoringTask
+from app.repositories.question_repository import QuestionRepository
+from app.services.question_service import QuestionService
+from app.services.scoring_service import ScoringService
 from app.api.documents import router as documents_router
 from app.api.health import router as health_router
 from app.api.generation import router as generation_router
@@ -59,6 +66,15 @@ def create_app(settings: Settings | None = None, *, ocr_engine: OcrEngine | None
                     DocumentGenerationTask(app.state.llm_client, app.state.llm_tasks['document_generation']),
                     app.state.session_factory,
                 )
+                app.state.question_repository = QuestionRepository(app.state.session_factory)
+                app.state.question_service = QuestionService(
+                    app.state.question_repository, app.state.retrieval_service,
+                    QuestionGenerationTask(app.state.llm_client, app.state.llm_tasks['question_generation']),
+                )
+                app.state.scoring_service = ScoringService(
+                    app.state.question_repository,
+                    ScoringTask(app.state.llm_client, app.state.llm_tasks['scoring']),
+                )
                 yield
         finally:
             engine.dispose()
@@ -77,6 +93,8 @@ def create_app(settings: Settings | None = None, *, ocr_engine: OcrEngine | None
     app.include_router(documents_router, prefix="/api")
     app.include_router(retrieval_router, prefix="/api")
     app.include_router(generation_router, prefix="/api")
+    app.include_router(questions_router, prefix="/api")
+    app.include_router(scoring_router, prefix="/api")
     return app
 
 

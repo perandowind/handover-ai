@@ -1,7 +1,7 @@
 # Handover AI — Prototype v1
 
 스캔 이미지 PDF 기반 인수인계서 자동 작성 및 분석 시스템입니다.
-최우선 명세는 [PROTOTYPE_SPEC.md](PROTOTYPE_SPEC.md)이며, 현재 **Phase 1~6 — Project Skeleton / Document Pipeline / LLM Infrastructure / SQL Retrieval / Handover Generation / PDF Export**까지 구현했습니다.
+최우선 명세는 [PROTOTYPE_SPEC.md](PROTOTYPE_SPEC.md)이며, 현재 **Phase 1~7 — Project Skeleton / Document Pipeline / LLM Infrastructure / SQL Retrieval / Handover Generation / PDF Export / Questions & Scoring**까지 구현했습니다.
 
 ## 현재 범위
 
@@ -19,7 +19,7 @@ PDF 업로드 → 파일 검증 → 페이지 PNG 렌더링 → PaddleOCR
 - 자연어 → SQL Generation → SQL Validator → 읽기 전용 SQLite 조회 → Context 구성
 - 조회 Context 기반 인수인계서 생성, 기본 8개 목차 검증, React Preview
 - Jinja2 HTML → PyMuPDF Story PDF 및 React 다운로드
-- 문제 생성, 채점/Python fallback은 이후 Phase 범위
+- 문서 Context 기반 문제 생성·저장, Questions/Quiz UI, LLM 우선 채점 및 실패 시 Python fallback
 - PP-StructureV3를 호출하거나 별도 필수 의존성으로 사용하지 않습니다.
 - PDF 텍스트를 직접 추출하는 처리 경로는 없습니다. 입력은 항상 이미지로 렌더링하여 OCR합니다.
 
@@ -675,3 +675,100 @@ README.md
 ```
 
 DOCX/Google Docs Export는 구현하지 않았습니다. 이후 Phase 전에는 실제 업무 문서의 글자 종류·최대 본문 길이·원하는 출력 양식으로 확인하세요. 임의 CSS/표/이미지를 입력하는 범용 HTML 변환 API는 제공하지 않습니다.
+
+## Phase 7 — Question Generation / Scoring
+
+기존 실행 명령과 환경변수를 그대로 사용합니다. `QUESTION_MODEL`, `SCORING_MODEL`의 기본값은 `qwen3.5:4b`이며 Task는 공통 `LLMProvider`를 통해 호출합니다. 새 패키지나 migration은 필요하지 않습니다. 기존 `questions`, `scoring_results` 테이블을 사용합니다.
+
+### 문제 생성 및 조회
+
+React의 **문제 생성** 메뉴에서 요청, 문제 수, 유형과 선택적 대상 문서를 지정하세요. 기본값은 객관식 5개이며 1~20개를 요청할 수 있습니다. UI에는 최근 100개 문서를 표시하며 OCR/구조화가 완료된 문서를 선택할 수 있습니다. API는 최대 100개 문서 ID를 받습니다.
+
+```bash
+curl --fail-with-body http://127.0.0.1:8000/api/questions/generate \
+  -H 'Content-Type: application/json' \
+  -d '{"document_ids":[1],"question_type":"multiple_choice","count":5,"prompt":"주요 업무와 주의사항을 중심으로 문제를 만들어줘."}'
+```
+
+| API | 용도 |
+| --- | --- |
+| `POST /api/questions/generate` | 생성·검증 후 전체 문제를 한 transaction으로 저장, 201 응답 |
+| `GET /api/questions?offset=0&limit=20` | 최신순 목록, limit 최대 100 |
+| `GET /api/questions/{id}` | 문제 및 선택지, 원천 문서/섹션 ID |
+| `GET /api/questions/{id}/answer` | 정답·해설 명시적 조회 |
+| `POST /api/scoring/evaluate` | 채점 및 결과 저장 |
+
+- 기존 SQL Retrieval/Validator를 사용합니다. SQL Task에 실제 섹션 ID를 `source_section_id`로 반환하도록 요청하고, 해당 ID의 본문을 ORM으로 다시 읽어 Context를 만듭니다. SQL 결과의 상수 본문은 출제 근거로 사용하지 않습니다.
+- 완료된 문서와 요청한 문서 범위 내의 섹션만 허용합니다. Context 크기 제한 후 실제 전달된 섹션 ID만 출처로 허용하고 저장 시에도 연결을 재검증합니다. 적합한 출처가 없으면 `QUESTION_CONTEXT_EMPTY`(422)로 종료합니다.
+- 문제 수·유형·출처·중복 문제·선택지·정답을 검증합니다. JSON/문제 검증 실패 시 한 번만 재생성하고, 재실패 시 `QUESTION_GENERATION_FAILED`(502)를 반환하며 부분 저장하지 않습니다. 문제 생성에는 Python fallback이 없습니다.
+- 객관식 선택지는 2~6개이며 정답은 `"1"`, `"2"`처럼 1부터 시작하는 번호 문자열입니다. 단답형은 `question_type: "short_answer"`로 요청하며 선택지가 없습니다.
+- 목록/상세/생성 응답에는 정답·해설을 넣지 않습니다. Questions 화면의 **정답·해설 보기**가 별도 API를 호출합니다. 이는 학습 UI 동작이며 인증/시험 감독 기능은 아닙니다.
+
+### Quiz와 채점 정책
+
+**Quiz**에서 문제를 선택하고 답안을 제출하세요. 점수, 판정, 사유 및 `LLM` / `Python fallback` 채점 방식을 표시합니다.
+
+```bash
+curl --fail-with-body http://127.0.0.1:8000/api/scoring/evaluate \
+  -H 'Content-Type: application/json' \
+  -d '{"question_id":1,"answer":"2"}'
+```
+
+응답에는 `id`, `question_id`, `score`, `is_correct`, `reason`, `scoring_method`가 포함됩니다.
+
+1. 저장된 문제/정답과 사용자 답안을 ScoringTask에 전달합니다.
+2. LLM JSON 및 Pydantic 검증(유한한 0~100 점수 등)에 성공하면 **LLM 결과를 그대로 사용**합니다. Python 점수를 계산하거나 평균내지 않습니다.
+3. Ollama 연결/HTTP 오류, timeout, parsing 오류, validation 오류 등 LLM 실행 실패에만 Python fallback을 한 번 실행합니다. 채점 LLM 재시도는 하지 않습니다.
+4. 객관식 fallback은 번호의 exact match, 단답형 fallback은 trim·영문 소문자화·연속 whitespace 정리 후 exact match로 100점 또는 0점을 반환합니다. 유사도나 부분 점수는 계산하지 않습니다.
+5. 원래 제출 답안과 결과, `scoring_method: llm | python_fallback`을 저장합니다. 없는 문제/잘못된 답안은 입력 오류로 거부하고, DB 오류나 요청 cancellation은 fallback으로 숨기지 않습니다.
+
+### Phase 7 검증 결과 (2026-10-02)
+
+```bash
+cd backend
+uv run pytest -q tests/questions_scoring
+uv run pytest -q
+uv run alembic check
+# 별도 터미널, 저장소 루트에서
+cd frontend
+npm run build
+```
+
+- 신규 **67 passed**, 전체 **398 passed, 5 warnings**. 경고는 기존 PyMuPDF SWIG deprecation입니다.
+- 실제 SQLite + SQL Validator/Retrieval + Mock Provider로 문제 생성·출처 검증·저장·조회·재생성·rollback을 검증했습니다.
+- 정상 LLM 점수를 변경하지 않으며 fallback을 호출하지 않는 것을 검사했습니다. 연결 실패, timeout, runtime 오류, 잘못된 JSON, 범위 초과/잘못된 타입 등의 실패를 의도적으로 발생시켜 fallback과 DB 저장을 검증했습니다.
+- 실제 `OllamaLLMProvider`에도 `httpx.MockTransport`로 연결 오류/timeout/HTTP 500/잘못된 응답을 주입했습니다. 테스트에 실행 중인 Ollama는 필요하지 않습니다.
+- TypeScript/Vite build와 Alembic check 통과. revision `0001` 유지.
+- 브라우저는 기존 OCR 샘플 DB의 임시 복사본 + Mock Provider로 문제 생성·정답/해설 조회·Quiz 제출을 검증했습니다. 정상 LLM 73.5점 보존과 의도적 LLM 실패 후 Python fallback 표시를 확인했습니다. 원본 샘플 DB는 변경하지 않았습니다.
+
+### Phase 7 파일
+
+신규:
+
+```text
+backend/app/api/{questions,scoring}.py
+backend/app/repositories/question_repository.py
+backend/app/schemas/{question,scoring}.py
+backend/app/scoring/{__init__,python_fallback}.py
+backend/app/services/{question_context,question_service,scoring_service}.py
+backend/tests/questions_scoring/{conftest,test_questions_flow,test_scoring_flow}.py
+frontend/src/types/question.ts
+frontend/src/components/{QuestionCard,QuestionList}.tsx
+frontend/src/pages/{Questions,Quiz}.tsx
+```
+
+수정:
+
+```text
+backend/app/main.py
+backend/app/llm/prompts/{question_generation,scoring}.py
+backend/app/llm/tasks/{question_task,scoring_task}.py
+backend/app/retrieval/context.py
+backend/app/schemas/llm.py
+backend/tests/llm/test_dependencies.py
+frontend/src/App.tsx
+frontend/src/style.css
+README.md
+```
+
+다음 Phase 전에는 실제 Qwen3.5-4B와 업무 문서로 문제의 근거·난이도·정답/해설 및 LLM 채점 품질을 확인해야 합니다. 이번 검증은 Mock 기반이며 실제 모델 품질 평가는 포함하지 않았습니다. 출처 연결과 구조 검증은 의미적 정확성을 보증하지 않습니다. Context보다 많은 문제를 요청하여 검증에 실패하면 문제 수를 줄이거나 다른 문서를 선택할 수 있습니다.

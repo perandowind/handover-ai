@@ -34,7 +34,7 @@ def settings(tmp_path):
                     ollama_base_url='http://ollama.invalid:11434')
 
 
-def test_application_starts_without_ollama_and_excludes_future_routes(tmp_path):
+def test_application_starts_without_ollama_and_registers_task_routes(tmp_path):
     app = create_app(settings(tmp_path))
     with TestClient(app) as client:
         assert client.get('/api/health').json() == {'status': 'ok'}
@@ -44,7 +44,8 @@ def test_application_starts_without_ollama_and_excludes_future_routes(tmp_path):
         assert '/api/documents/upload' in paths
         assert '/api/generation/handover' in paths
         assert '/api/generation/handover/pdf' in paths
-        assert not any(path.startswith(('/api/questions', '/api/scoring')) for path in paths)
+        assert '/api/questions/generate' in paths
+        assert '/api/scoring/evaluate' in paths
 
 
 def test_fastapi_dependency_injection_with_mock_provider(tmp_path):
