@@ -1,0 +1,76 @@
+{
+  "id": "seed-database",
+  "synthetic": true,
+  "domain": "Database",
+  "title": "DB 운영 인수인계서",
+  "organization": "가상 실습 조직 SEED",
+  "handover_date": "2026-10-02",
+  "sections": [
+    {
+      "section_type": "overview",
+      "title": "업무 개요",
+      "lines": [
+        "데이터베이스 운영과 백업 점검을 인계합니다.",
+        "대상은 가상 주문 데이터베이스이며 실제 고객 정보는 없습니다."
+      ]
+    },
+    {
+      "section_type": "responsibilities",
+      "title": "주요 업무",
+      "lines": [
+        "업무명: 일일 백업 확인",
+        "설명: 백업 성공 여부와 저장 공간을 확인합니다.",
+        "주기: 매일 09:00",
+        "중요도: 5"
+      ]
+    },
+    {
+      "section_type": "systems",
+      "title": "관련 시스템",
+      "lines": [
+        "PostgreSQL 시험 서버와 가상 백업 저장소를 사용합니다.",
+        "시스템 식별자: LAB-DB-01"
+      ]
+    },
+    {
+      "section_type": "procedures",
+      "title": "업무 절차",
+      "lines": [
+        "백업 로그 확인 후 시험 환경에서 복구 검증을 수행합니다.",
+        "복구 결과와 소요 시간을 점검 일지에 기록합니다."
+      ]
+    },
+    {
+      "section_type": "precautions",
+      "title": "주의사항",
+      "lines": [
+        "백업 파일은 보존 기간 확인 없이 삭제하지 않습니다.",
+        "접속 비밀번호는 문서에 기록하지 않습니다."
+      ]
+    },
+    {
+      "section_type": "troubleshooting",
+      "title": "장애 대응",
+      "lines": [
+        "백업 실패 시 오류 로그와 저장 공간을 확인합니다.",
+        "복구 실패가 반복되면 가상 당직 담당자에게 알립니다."
+      ]
+    },
+    {
+      "section_type": "contacts",
+      "title": "담당자 및 연락처",
+      "lines": [
+        "인계 역할: 가상 DB 담당 A / 인수 역할: 가상 DB 담당 B",
+        "연락처: db@example.invalid"
+      ]
+    },
+    {
+      "section_type": "references",
+      "title": "참고자료",
+      "lines": [
+        "가상 자료: DB 백업 점검표 v1.0",
+        "미결 사항: 다음 정기 복구 훈련 결과를 첨부합니다."
+      ]
+    }
+  ]
+}

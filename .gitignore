@@ -113,3 +113,6 @@ Thumbs.db
 # OCR model cache used by local verification
 backend/data/paddlex/
 backend/data/smoke/
+
+# Isolated real OCR seed verification artifacts
+backend/data/seed-runs/

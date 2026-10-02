@@ -1,0 +1,86 @@
+{
+  "id": "seed-database",
+  "synthetic": true,
+  "domain": "Database",
+  "title": "DB 운영 인수인계서",
+  "pdf": "seed-database.pdf",
+  "expected_pages": 2,
+  "sections": [
+    {
+      "section_type": "overview",
+      "title": "업무 개요",
+      "source_page": 1,
+      "expected_keywords": [
+        "데이터베이스",
+        "운영",
+        "백업"
+      ]
+    },
+    {
+      "section_type": "responsibilities",
+      "title": "주요 업무",
+      "source_page": 1,
+      "expected_keywords": [
+        "백업",
+        "저장 공간"
+      ]
+    },
+    {
+      "section_type": "systems",
+      "title": "관련 시스템",
+      "source_page": 1,
+      "expected_keywords": [
+        "PostgreSQL",
+        "저장소"
+      ]
+    },
+    {
+      "section_type": "procedures",
+      "title": "업무 절차",
+      "source_page": 1,
+      "expected_keywords": [
+        "로그",
+        "복구",
+        "점검 일지"
+      ]
+    },
+    {
+      "section_type": "precautions",
+      "title": "주의사항",
+      "source_page": 2,
+      "expected_keywords": [
+        "보존 기간",
+        "비밀번호"
+      ]
+    },
+    {
+      "section_type": "troubleshooting",
+      "title": "장애 대응",
+      "source_page": 2,
+      "expected_keywords": [
+        "실패",
+        "오류 로그"
+      ]
+    },
+    {
+      "section_type": "contacts",
+      "title": "담당자 및 연락처",
+      "source_page": 2,
+      "expected_keywords": [
+        "가상",
+        "연락처"
+      ]
+    },
+    {
+      "section_type": "references",
+      "title": "참고자료",
+      "source_page": 2,
+      "expected_keywords": [
+        "점검표",
+        "미결 사항"
+      ]
+    }
+  ],
+  "minimum_keyword_recall": 0.9,
+  "minimum_items": 8
+}

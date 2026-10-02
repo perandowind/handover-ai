@@ -1,0 +1,574 @@
+{
+  "created_at": "2026-10-02T08:03:55.632692+00:00",
+  "mode": "real_paddleocr",
+  "artifact_directory": "/Users/mac/study/handover-ai/backend/data/seed-runs/20261002T080355249351",
+  "database_url": "sqlite:////Users/mac/study/handover-ai/backend/data/seed-runs/20261002T080355249351/app.db",
+  "models": [
+    "PP-OCRv5_mobile_det",
+    "korean_PP-OCRv5_mobile_rec"
+  ],
+  "render_dpi": 200,
+  "versions": {
+    "paddleocr": "3.3.3",
+    "paddlepaddle": "3.2.2",
+    "PyMuPDF": "1.28.2"
+  },
+  "documents": [
+    {
+      "seed_id": "seed-backend",
+      "domain": "Backend",
+      "title": "백엔드 API 운영 인수인계서",
+      "document_id": 1,
+      "passed": true,
+      "ocr_status": "completed",
+      "parse_status": "completed",
+      "pages": 2,
+      "sections": 9,
+      "handover_items": 9,
+      "ocr_lines": [
+        31,
+        30
+      ],
+      "title_found": true,
+      "raw_preserved": true,
+      "links_valid": true,
+      "keyword_matched": 18,
+      "keyword_total": 18,
+      "keyword_recall": 1.0,
+      "section_checks": [
+        {
+          "section_type": "overview",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "백엔드",
+            "주문",
+            "배포"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "responsibilities",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "응답 시간",
+            "오류 비율"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "systems",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "FastAPI",
+            "Redis"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "procedures",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "테스트",
+            "승인",
+            "상태 점검"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "precautions",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "인증",
+            "호환성"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "troubleshooting",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "오류",
+            "이전 버전"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "contacts",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "가상",
+            "연락처"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "references",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "점검표",
+            "미결 사항"
+          ],
+          "missing_keywords": []
+        }
+      ],
+      "processing_error": null,
+      "pdf_sha256": "b668de907e94a6c75032d2b71f3ee72ed0221a3f231dbdde4366e1396063a84e",
+      "metadata_sha256": "ac16e62a2fda823819bb363303c0ca8bf39648a63647d2d42507733da09a9f4f"
+    },
+    {
+      "seed_id": "seed-database",
+      "domain": "Database",
+      "title": "DB 운영 인수인계서",
+      "document_id": 2,
+      "passed": true,
+      "ocr_status": "completed",
+      "parse_status": "completed",
+      "pages": 2,
+      "sections": 9,
+      "handover_items": 9,
+      "ocr_lines": [
+        27,
+        26
+      ],
+      "title_found": true,
+      "raw_preserved": true,
+      "links_valid": true,
+      "keyword_matched": 18,
+      "keyword_total": 18,
+      "keyword_recall": 1.0,
+      "section_checks": [
+        {
+          "section_type": "overview",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "데이터베이스",
+            "운영",
+            "백업"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "responsibilities",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "백업",
+            "저장 공간"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "systems",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "PostgreSQL",
+            "저장소"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "procedures",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "로그",
+            "복구",
+            "점검 일지"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "precautions",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "보존 기간",
+            "비밀번호"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "troubleshooting",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "실패",
+            "오류 로그"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "contacts",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "가상",
+            "연락처"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "references",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "점검표",
+            "미결 사항"
+          ],
+          "missing_keywords": []
+        }
+      ],
+      "processing_error": null,
+      "pdf_sha256": "eaab4224a0f8d4df1830e0d11911459a8a59b533c9c6d55984d6959401773091",
+      "metadata_sha256": "990e45a2e9f29364f1992a60d74728b1176d72fd497f0812ce4b3df346f3684a"
+    },
+    {
+      "seed_id": "seed-infrastructure",
+      "domain": "Infrastructure",
+      "title": "Linux 서버 운영 인수인계서",
+      "document_id": 3,
+      "passed": true,
+      "ocr_status": "completed",
+      "parse_status": "completed",
+      "pages": 2,
+      "sections": 9,
+      "handover_items": 9,
+      "ocr_lines": [
+        31,
+        29
+      ],
+      "title_found": true,
+      "raw_preserved": true,
+      "links_valid": true,
+      "keyword_matched": 18,
+      "keyword_total": 18,
+      "keyword_recall": 1.0,
+      "section_checks": [
+        {
+          "section_type": "overview",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "가상 서버",
+            "자원",
+            "보안"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "responsibilities",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "메모리",
+            "디스크"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "systems",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "Linux",
+            "대시보드"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "procedures",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "백업",
+            "재시작",
+            "서비스"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "precautions",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "승인",
+            "권한"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "troubleshooting",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "디스크",
+            "로그"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "contacts",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "가상",
+            "연락처"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "references",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "점검표",
+            "미결 사항"
+          ],
+          "missing_keywords": []
+        }
+      ],
+      "processing_error": null,
+      "pdf_sha256": "2344f395eee5a9372f6f80657b2feedf1e5203b3e66b4e1af2a8cb16a18e3669",
+      "metadata_sha256": "ae686beb56416ad98243a72f56397f974bd31bba98fb16c53ac6d5042c885554"
+    },
+    {
+      "seed_id": "seed-network",
+      "domain": "Network",
+      "title": "네트워크 장애 대응 인수인계서",
+      "document_id": 4,
+      "passed": true,
+      "ocr_status": "completed",
+      "parse_status": "completed",
+      "pages": 2,
+      "sections": 9,
+      "handover_items": 9,
+      "ocr_lines": [
+        29,
+        29
+      ],
+      "title_found": true,
+      "raw_preserved": true,
+      "links_valid": true,
+      "keyword_matched": 18,
+      "keyword_total": 18,
+      "keyword_recall": 1.0,
+      "section_checks": [
+        {
+          "section_type": "overview",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "네트워크",
+            "연결",
+            "장애"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "responsibilities",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "패킷",
+            "지연"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "systems",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "스위치",
+            "방화벽"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "procedures",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "설정",
+            "승인",
+            "시험"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "precautions",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "방화벽",
+            "외부망"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "troubleshooting",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "복원",
+            "패킷"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "contacts",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "가상",
+            "연락처"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "references",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "점검표",
+            "미결 사항"
+          ],
+          "missing_keywords": []
+        }
+      ],
+      "processing_error": null,
+      "pdf_sha256": "2621f020939a5dbc99a2eca3658e978582b5934e7314b64ce9616a476464321a",
+      "metadata_sha256": "18f6e375a542e77e15037b936a778d968f6553bb6b36c4ad48ef1d7a1e9c16c9"
+    },
+    {
+      "seed_id": "seed-operations",
+      "domain": "Operations",
+      "title": "배포 및 모니터링 인수인계서",
+      "document_id": 5,
+      "passed": true,
+      "ocr_status": "completed",
+      "parse_status": "completed",
+      "pages": 2,
+      "sections": 9,
+      "handover_items": 9,
+      "ocr_lines": [
+        31,
+        28
+      ],
+      "title_found": true,
+      "raw_preserved": true,
+      "links_valid": true,
+      "keyword_matched": 18,
+      "keyword_total": 18,
+      "keyword_recall": 1.0,
+      "section_checks": [
+        {
+          "section_type": "overview",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "배포",
+            "모니터링",
+            "일정"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "responsibilities",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "승인",
+            "알림"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "systems",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "배포",
+            "대시보드"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "procedures",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "승인",
+            "지표",
+            "기록"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "precautions",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "시험 알림",
+            "장애"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "troubleshooting",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "오류",
+            "조치"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "contacts",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "가상",
+            "연락처"
+          ],
+          "missing_keywords": []
+        },
+        {
+          "section_type": "references",
+          "present": true,
+          "source_page_matches": true,
+          "matched_keywords": [
+            "점검표",
+            "미결 사항"
+          ],
+          "missing_keywords": []
+        }
+      ],
+      "processing_error": null,
+      "pdf_sha256": "9510362e889c66c6d6ec9581969492eb1f9c99f7463ace54f0ab3c0795fff043",
+      "metadata_sha256": "f9fd0240e04824c95764f0283b87b409a0c0c9d9aee924bf2eaf50ea73e0d709"
+    }
+  ],
+  "passed": true,
+  "database_counts": {
+    "documents": 5,
+    "document_pages": 10,
+    "document_sections": 45,
+    "handover_items": 45,
+    "questions": 0,
+    "scoring_results": 0
+  },
+  "foreign_key_violations": [],
+  "item_document_mismatches": 0
+}

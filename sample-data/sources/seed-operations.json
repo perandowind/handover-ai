@@ -1,0 +1,76 @@
+{
+  "id": "seed-operations",
+  "synthetic": true,
+  "domain": "Operations",
+  "title": "배포 및 모니터링 인수인계서",
+  "organization": "가상 실습 조직 SEED",
+  "handover_date": "2026-10-02",
+  "sections": [
+    {
+      "section_type": "overview",
+      "title": "업무 개요",
+      "lines": [
+        "시험 서비스의 배포 일정과 모니터링 업무를 인계합니다.",
+        "가상 운영 기록만 사용하며 실제 고객 알림은 보내지 않습니다."
+      ]
+    },
+    {
+      "section_type": "responsibilities",
+      "title": "주요 업무",
+      "lines": [
+        "업무명: 배포 일정 확인",
+        "설명: 변경 승인과 모니터링 알림을 확인합니다.",
+        "주기: 매일 11:00",
+        "중요도: 4"
+      ]
+    },
+    {
+      "section_type": "systems",
+      "title": "관련 시스템",
+      "lines": [
+        "가상 배포 관리 화면과 모니터링 대시보드를 사용합니다.",
+        "시스템 식별자: LAB-OPS-01"
+      ]
+    },
+    {
+      "section_type": "procedures",
+      "title": "업무 절차",
+      "lines": [
+        "배포 목록과 승인 상태를 확인하고 담당 역할을 배정합니다.",
+        "배포 후 지표를 점검하고 완료 기록을 남깁니다."
+      ]
+    },
+    {
+      "section_type": "precautions",
+      "title": "주의사항",
+      "lines": [
+        "시험 알림을 실제 연락처로 보내지 않습니다.",
+        "진행 중인 장애가 있으면 배포 일정을 다시 협의합니다."
+      ]
+    },
+    {
+      "section_type": "troubleshooting",
+      "title": "장애 대응",
+      "lines": [
+        "오류 알림 발생 시 지표와 변경 시각을 비교합니다.",
+        "가상 당직 담당자에게 전달하고 조치 기록을 남깁니다."
+      ]
+    },
+    {
+      "section_type": "contacts",
+      "title": "담당자 및 연락처",
+      "lines": [
+        "인계 역할: 가상 운영 담당 A / 인수 역할: 가상 운영 담당 B",
+        "연락처: ops@example.invalid"
+      ]
+    },
+    {
+      "section_type": "references",
+      "title": "참고자료",
+      "lines": [
+        "가상 자료: 배포 승인 점검표 v1.0",
+        "미결 사항: 다음 모니터링 훈련의 알림 기준을 검토합니다."
+      ]
+    }
+  ]
+}

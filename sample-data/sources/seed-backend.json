@@ -1,0 +1,76 @@
+{
+  "id": "seed-backend",
+  "synthetic": true,
+  "domain": "Backend",
+  "title": "백엔드 API 운영 인수인계서",
+  "organization": "가상 실습 조직 SEED",
+  "handover_date": "2026-10-02",
+  "sections": [
+    {
+      "section_type": "overview",
+      "title": "업무 개요",
+      "lines": [
+        "백엔드 주문 API의 배포와 상태 점검을 인계합니다.",
+        "시험용 주문만 사용하며 실제 거래는 발생하지 않습니다."
+      ]
+    },
+    {
+      "section_type": "responsibilities",
+      "title": "주요 업무",
+      "lines": [
+        "업무명: API 상태 점검",
+        "설명: 응답 시간과 오류 비율을 확인합니다.",
+        "주기: 매일 10:00",
+        "중요도: 4"
+      ]
+    },
+    {
+      "section_type": "systems",
+      "title": "관련 시스템",
+      "lines": [
+        "FastAPI 시험 서비스와 Redis 시험 캐시를 사용합니다.",
+        "시스템 식별자: LAB-API-01"
+      ]
+    },
+    {
+      "section_type": "procedures",
+      "title": "업무 절차",
+      "lines": [
+        "변경 요청 검토 후 시험 환경에서 자동 테스트를 실행합니다.",
+        "승인 확인 후 배포하고 상태 점검 결과를 기록합니다."
+      ]
+    },
+    {
+      "section_type": "precautions",
+      "title": "주의사항",
+      "lines": [
+        "인증 토큰과 요청 본문을 로그에 남기지 않습니다.",
+        "호환성 확인 없이 응답 형식을 변경하지 않습니다."
+      ]
+    },
+    {
+      "section_type": "troubleshooting",
+      "title": "장애 대응",
+      "lines": [
+        "오류 비율 증가 시 최근 배포와 오류 로그를 확인합니다.",
+        "시험 환경에서 이전 버전으로 되돌리고 원인을 기록합니다."
+      ]
+    },
+    {
+      "section_type": "contacts",
+      "title": "담당자 및 연락처",
+      "lines": [
+        "인계 역할: 가상 API 담당 A / 인수 역할: 가상 API 담당 B",
+        "연락처: api@example.invalid"
+      ]
+    },
+    {
+      "section_type": "references",
+      "title": "참고자료",
+      "lines": [
+        "가상 자료: API 배포 점검표 v1.0",
+        "미결 사항: 다음 버전의 호환성 시험을 예약합니다."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "id": "seed-network",
+  "synthetic": true,
+  "domain": "Network",
+  "title": "네트워크 장애 대응 인수인계서",
+  "organization": "가상 실습 조직 SEED",
+  "handover_date": "2026-10-02",
+  "sections": [
+    {
+      "section_type": "overview",
+      "title": "업무 개요",
+      "lines": [
+        "시험 네트워크의 연결 점검과 장애 대응을 인계합니다.",
+        "대상은 격리된 가상 실습망이며 실제 사내망이 아닙니다."
+      ]
+    },
+    {
+      "section_type": "responsibilities",
+      "title": "주요 업무",
+      "lines": [
+        "업무명: 연결 상태 점검",
+        "설명: 패킷 손실과 연결 지연을 확인합니다.",
+        "주기: 매일 09:30",
+        "중요도: 5"
+      ]
+    },
+    {
+      "section_type": "systems",
+      "title": "관련 시스템",
+      "lines": [
+        "가상 스위치와 시험 방화벽을 사용합니다.",
+        "시스템 식별자: LAB-NET-01"
+      ]
+    },
+    {
+      "section_type": "procedures",
+      "title": "업무 절차",
+      "lines": [
+        "변경 전 설정을 보관하고 승인된 작업 순서를 확인합니다.",
+        "변경 후 연결 시험을 수행하고 결과를 기록합니다."
+      ]
+    },
+    {
+      "section_type": "precautions",
+      "title": "주의사항",
+      "lines": [
+        "승인 없이 방화벽 허용 범위를 넓히지 않습니다.",
+        "시험망과 외부망을 임의로 연결하지 않습니다."
+      ]
+    },
+    {
+      "section_type": "troubleshooting",
+      "title": "장애 대응",
+      "lines": [
+        "연결 단절 시 영향 구간과 최근 변경 내역을 확인합니다.",
+        "이전 설정 복원 후 패킷 손실을 다시 측정합니다."
+      ]
+    },
+    {
+      "section_type": "contacts",
+      "title": "담당자 및 연락처",
+      "lines": [
+        "인계 역할: 가상 통신 담당 A / 인수 역할: 가상 통신 담당 B",
+        "연락처: network@example.invalid"
+      ]
+    },
+    {
+      "section_type": "references",
+      "title": "참고자료",
+      "lines": [
+        "가상 자료: 네트워크 변경 점검표 v1.0",
+        "미결 사항: 다음 장애 복구 훈련 일정을 확정합니다."
+      ]
+    }
+  ]
+}

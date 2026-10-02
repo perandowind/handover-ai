@@ -1,0 +1,86 @@
+{
+  "id": "seed-network",
+  "synthetic": true,
+  "domain": "Network",
+  "title": "네트워크 장애 대응 인수인계서",
+  "pdf": "seed-network.pdf",
+  "expected_pages": 2,
+  "sections": [
+    {
+      "section_type": "overview",
+      "title": "업무 개요",
+      "source_page": 1,
+      "expected_keywords": [
+        "네트워크",
+        "연결",
+        "장애"
+      ]
+    },
+    {
+      "section_type": "responsibilities",
+      "title": "주요 업무",
+      "source_page": 1,
+      "expected_keywords": [
+        "패킷",
+        "지연"
+      ]
+    },
+    {
+      "section_type": "systems",
+      "title": "관련 시스템",
+      "source_page": 1,
+      "expected_keywords": [
+        "스위치",
+        "방화벽"
+      ]
+    },
+    {
+      "section_type": "procedures",
+      "title": "업무 절차",
+      "source_page": 1,
+      "expected_keywords": [
+        "설정",
+        "승인",
+        "시험"
+      ]
+    },
+    {
+      "section_type": "precautions",
+      "title": "주의사항",
+      "source_page": 2,
+      "expected_keywords": [
+        "방화벽",
+        "외부망"
+      ]
+    },
+    {
+      "section_type": "troubleshooting",
+      "title": "장애 대응",
+      "source_page": 2,
+      "expected_keywords": [
+        "복원",
+        "패킷"
+      ]
+    },
+    {
+      "section_type": "contacts",
+      "title": "담당자 및 연락처",
+      "source_page": 2,
+      "expected_keywords": [
+        "가상",
+        "연락처"
+      ]
+    },
+    {
+      "section_type": "references",
+      "title": "참고자료",
+      "source_page": 2,
+      "expected_keywords": [
+        "점검표",
+        "미결 사항"
+      ]
+    }
+  ],
+  "minimum_keyword_recall": 0.9,
+  "minimum_items": 8
+}
